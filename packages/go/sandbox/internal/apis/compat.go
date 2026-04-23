@@ -1,0 +1,20 @@
+package apis
+
+// Compatibility aliases keep the hand-written SDK layer stable while the
+// generated client follows operation IDs from the upstream OpenAPI spec.
+type CreateSandboxJSONRequestBody = PostSandboxesJSONRequestBody
+type ConnectSandboxJSONRequestBody = PostSandboxesSandboxIDConnectJSONRequestBody
+type RefreshSandboxJSONRequestBody = PostSandboxesSandboxIDRefreshesJSONRequestBody
+type UpdateSandboxTimeoutJSONRequestBody = PostSandboxesSandboxIDTimeoutJSONRequestBody
+type ListSandboxesV2Params = GetV2SandboxesParams
+type GetSandboxLogsParams = GetSandboxesSandboxIDLogsParams
+type GetSandboxMetricsParams = GetSandboxesSandboxIDMetricsParams
+
+type GetTemplateParams = GetTemplatesTemplateIDParams
+type UpdateTemplateJSONRequestBody = PatchTemplatesTemplateIDJSONRequestBody
+type CreateTemplateV3JSONRequestBody = PostV3TemplatesJSONRequestBody
+type StartTemplateBuildV2JSONRequestBody = PostV2TemplatesTemplateIDBuildsBuildIDJSONRequestBody
+type GetTemplateBuildStatusParams = GetTemplatesTemplateIDBuildsBuildIDStatusParams
+type GetTemplateBuildLogsParams = GetTemplatesTemplateIDBuildsBuildIDLogsParams
+type AssignTemplateTagsJSONRequestBody = PostTemplatesTagsJSONRequestBody
+type DeleteTemplateTagsJSONRequestBody = DeleteTemplatesTagsJSONRequestBody
