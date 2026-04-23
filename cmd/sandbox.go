@@ -176,11 +176,28 @@ func newSandboxMetricsCmd() *cobra.Command {
 	return cmd
 }
 
+func newSandboxInfoCmd() *cobra.Command {
+	info := instance.InfoInfo{}
+	cmd := &cobra.Command{
+		Use:     "info <sandboxID>",
+		Aliases: []string{"in"},
+		Short:   "Show information for a sandbox (alias: in)",
+		Args:    cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			info.SandboxID = args[0]
+			instance.Info(info)
+		},
+	}
+	cmd.Flags().StringVarP(&info.Format, "format", "f", "pretty", "output format: pretty or json")
+	return cmd
+}
+
 func init() {
 	sandboxCmd.AddCommand(
 		newSandboxListCmd(),
 		newSandboxCreateCmd(),
 		newSandboxConnectCmd(),
+		newSandboxInfoCmd(),
 		newSandboxKillCmd(),
 		newSandboxPauseCmd(),
 		newSandboxResumeCmd(),
@@ -188,6 +205,7 @@ func init() {
 		newSandboxLogsCmd(),
 		newSandboxMetricsCmd(),
 		newTemplateCmd(),
+		newVolumeCmd(),
 	)
 	rootCmd.AddCommand(sandboxCmd)
 }

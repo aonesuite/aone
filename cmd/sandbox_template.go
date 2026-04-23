@@ -14,15 +14,24 @@ func newTemplateCmd() *cobra.Command {
 			_ = cmd.Help()
 		},
 	}
+
+	// `build` is kept as an internal low-level command (hidden) so the
+	// primary surface matches the e2b CLI: `create` drives Dockerfile builds
+	// and `migrate` converts Dockerfiles to SDK template code.
+	buildCmd := newTemplateBuildCmd()
+	buildCmd.Hidden = true
+
 	cmd.AddCommand(
 		newTemplateListCmd(),
 		newTemplateGetCmd(),
+		newTemplateCreateCmd(),
 		newTemplateDeleteCmd(),
-		newTemplateBuildCmd(),
+		buildCmd,
 		newTemplateBuildsCmd(),
 		newTemplatePublishCmd(true),
 		newTemplatePublishCmd(false),
 		newTemplateInitCmd(),
+		newTemplateMigrateCmd(),
 	)
 	return cmd
 }
@@ -139,5 +148,49 @@ func newTemplateInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&info.Name, "name", "", "template project name")
 	cmd.Flags().StringVar(&info.Language, "language", "", "programming language (go, typescript, python)")
 	cmd.Flags().StringVar(&info.Path, "path", "", "output directory")
+	return cmd
+}
+
+// newTemplateCreateCmd builds a Dockerfile as a sandbox template directly,
+// mirroring the e2b CLI `template create` command. The template name is the
+// only required positional argument; Dockerfile and resource options are
+// provided via flags.
+func newTemplateCreateCmd() *cobra.Command {
+	info := template.BuildInfo{}
+	cmd := &cobra.Command{
+		Use:     "create <template-name>",
+		Aliases: []string{"ct"},
+		Short:   "Build a Dockerfile as a sandbox template (alias: ct)",
+		Args:    cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			info.Name = args[0]
+			template.Create(info)
+		},
+	}
+	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to e2b.Dockerfile or Dockerfile)")
+	cmd.Flags().StringVar(&info.Path, "path", "", "build context directory (defaults to Dockerfile directory)")
+	cmd.Flags().StringVarP(&info.StartCmd, "cmd", "c", "", "command executed when the sandbox starts")
+	cmd.Flags().StringVar(&info.ReadyCmd, "ready-cmd", "", "readiness check command")
+	cmd.Flags().Int32Var(&info.CPUCount, "cpu-count", 0, "sandbox CPU count")
+	cmd.Flags().Int32Var(&info.MemoryMB, "memory-mb", 0, "sandbox memory in MiB")
+	cmd.Flags().BoolVar(&info.NoCache, "no-cache", false, "skip cache when building")
+	return cmd
+}
+
+// newTemplateMigrateCmd converts a Dockerfile into SDK-native template code
+// (Go / TypeScript / Python), mirroring the e2b CLI `template migrate`.
+func newTemplateMigrateCmd() *cobra.Command {
+	info := template.MigrateInfo{}
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Migrate a Dockerfile to SDK-native template code",
+		Run: func(cmd *cobra.Command, args []string) {
+			template.Migrate(info)
+		},
+	}
+	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to e2b.Dockerfile or Dockerfile)")
+	cmd.Flags().StringVar(&info.Path, "path", "", "project root (defaults to current directory)")
+	cmd.Flags().StringVarP(&info.Language, "language", "l", "", "target language: go, typescript, python")
+	cmd.Flags().StringVar(&info.Name, "name", "", "template name used in generated code (defaults to directory name)")
 	return cmd
 }
