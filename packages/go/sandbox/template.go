@@ -136,6 +136,27 @@ func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*Templat
 	return templateAliasResponseFromAPI(resp.JSON200), nil
 }
 
+// TemplateAliasExists reports whether a template alias exists.
+// It returns true when the caller is the owner (200) or the alias is owned by
+// someone else (403); false when the alias is not found (404). Any other
+// status is returned as an error. Mirrors E2B's Template.exists.
+func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, error) {
+	resp, err := c.api.GetTemplatesAliasesAliasWithResponse(ctx, alias)
+	if err != nil {
+		return false, err
+	}
+	switch resp.HTTPResponse.StatusCode {
+	case 200:
+		return resp.JSON200 != nil, nil
+	case 403:
+		return true, nil
+	case 404:
+		return false, nil
+	default:
+		return false, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	}
+}
+
 // AssignTemplateTags assigns tags to the target described by body.
 func (c *Client) AssignTemplateTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
 	resp, err := c.api.PostTemplatesTagsWithResponse(ctx, body.toAPI())
