@@ -21,13 +21,6 @@ type Config struct {
 	// when a custom endpoint does not require API-key authentication.
 	APIKey string
 
-	// AccessToken, when set, is sent as "Authorization: Bearer <token>" on
-	// control-plane requests. Template build / management endpoints
-	// authenticate the user via access token rather than API key; supplying
-	// both is the common case (API key for sandbox ops, access token for
-	// template ops). The server picks whichever header the endpoint requires.
-	AccessToken string
-
 	// Credentials is accepted for source compatibility with earlier SDK versions.
 	// Injection-rule APIs are intentionally not implemented in this package.
 	Credentials any
@@ -73,9 +66,6 @@ func NewClient(config *Config) (*Client, error) {
 	if config.APIKey != "" {
 		opts = append(opts, apis.WithRequestEditorFn(apiKeyEditor(config.APIKey)))
 	}
-	if config.AccessToken != "" {
-		opts = append(opts, apis.WithRequestEditorFn(accessTokenEditor(config.AccessToken)))
-	}
 
 	client, err := apis.NewClientWithResponses(config.Endpoint, opts...)
 	if err != nil {
@@ -98,20 +88,6 @@ func apiKeyEditor(apiKey string) apis.RequestEditorFn {
 			return nil
 		}
 		req.Header.Set("X-API-Key", apiKey)
-		return nil
-	}
-}
-
-// accessTokenEditor sets an "Authorization: Bearer" header for requests that
-// require user-scoped auth (template management / build). When both an API key
-// and an access token are configured, the backend selects whichever header
-// applies to the endpoint being called.
-func accessTokenEditor(token string) apis.RequestEditorFn {
-	return func(ctx context.Context, req *http.Request) error {
-		if req.Header.Get("Authorization") != "" {
-			return nil
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
 		return nil
 	}
 }

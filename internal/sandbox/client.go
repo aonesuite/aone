@@ -37,7 +37,6 @@ func (t *keepaliveTransport) RoundTrip(req *http.Request) (*http.Response, error
 const (
 	EnvAoneSandboxAPIURL = "AONE_SANDBOX_API_URL"
 	EnvAoneAPIKey        = "AONE_API_KEY"
-	EnvAoneAccessToken   = "AONE_ACCESS_TOKEN"
 )
 
 // loadDotEnv loads variables from the .env file in the current directory.
@@ -66,32 +65,29 @@ func loadDotEnv() {
 func NewSandboxClient() (*sandbox.Client, error) {
 	loadDotEnv()
 
-	apiKey, accessToken, endpoint := resolveConfig()
+	apiKey, endpoint := resolveConfig()
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key not configured, please set %s environment variable", EnvAoneAPIKey)
 	}
 
 	return sandbox.NewClient(&sandbox.Config{
-		APIKey:      apiKey,
-		AccessToken: accessToken,
-		Endpoint:    endpoint,
+		APIKey:   apiKey,
+		Endpoint: endpoint,
 		HTTPClient: &http.Client{
 			Transport: &keepaliveTransport{base: http.DefaultTransport},
 		},
 	})
 }
 
-// resolveConfig returns the resolved API key, access token, and endpoint from
-// environment variables. Access token is optional; when unset, template
-// management endpoints rely on the API key alone.
-func resolveConfig() (apiKey, accessToken, endpoint string) {
+// resolveConfig returns the resolved API key and endpoint from environment
+// variables.
+func resolveConfig() (apiKey, endpoint string) {
 	apiKey = os.Getenv(EnvAoneAPIKey)
-	accessToken = os.Getenv(EnvAoneAccessToken)
 	endpoint = os.Getenv(EnvAoneSandboxAPIURL)
 	if endpoint == "" {
 		endpoint = sandbox.DefaultEndpoint
 	}
-	return apiKey, accessToken, endpoint
+	return apiKey, endpoint
 }
 
 // ResumeSandbox resumes a paused sandbox by calling POST /sandboxes/{id}/resume.
@@ -99,7 +95,7 @@ func resolveConfig() (apiKey, accessToken, endpoint string) {
 func ResumeSandbox(sandboxID string, timeout *int32) error {
 	loadDotEnv()
 
-	apiKey, _, endpoint := resolveConfig()
+	apiKey, endpoint := resolveConfig()
 	if apiKey == "" {
 		return fmt.Errorf("API key not configured, please set %s environment variable", EnvAoneAPIKey)
 	}
