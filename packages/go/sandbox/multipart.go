@@ -30,6 +30,17 @@ func (m *multipartFileWriter) writeFile(fieldName, fileName string, data []byte)
 	return err
 }
 
+// writeFileStream copies data from r into a multipart part. Used to upload
+// arbitrarily large files without buffering them in memory.
+func (m *multipartFileWriter) writeFileStream(fieldName, fileName string, r io.Reader) error {
+	part, err := m.w.CreateFormFile(fieldName, filepath.Base(fileName))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, r)
+	return err
+}
+
 func (m *multipartFileWriter) writeFileFullPath(fieldName, fullPath string, data []byte) error {
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes(fieldName), escapeQuotes(fullPath)))

@@ -386,7 +386,74 @@ func (fs *Filesystem) Write(ctx context.Context, path string, data []byte, opts 
 	return fs.GetInfo(ctx, path, opts...)
 }
 
-// WriteEntry is a single file payload used by WriteFiles.
+// WriteStream uploads data from r to path without buffering the full payload
+// in memory. It returns metadata for the written file. When WithGzip is set,
+// the reader's bytes are gzipped on the fly as they are streamed to the
+// server. Use this for large files or content produced incrementally; use
+// Write when the payload is already a []byte.
+func (fs *Filesystem) WriteStream(ctx context.Context, path string, r io.Reader, opts ...FilesystemOption) (*EntryInfo, error) {
+	o := applyFilesystemOpts(opts)
+	uploadURL := fs.sandbox.UploadURL(path, WithFileUser(o.user))
+
+	pr, pw := io.Pipe()
+	writer := newMultipartWriter(pw)
+
+	go func() {
+		src := r
+		var gz *gzip.Writer
+		if o.gzip {
+			// Gzip-encode on the fly: the multipart part body is the
+			// compressed stream; Content-Encoding: gzip tells the server.
+			gzPr, gzPw := io.Pipe()
+			gz = gzip.NewWriter(gzPw)
+			go func() {
+				if _, err := io.Copy(gz, r); err != nil {
+					_ = gz.Close()
+					gzPw.CloseWithError(err)
+					return
+				}
+				if err := gz.Close(); err != nil {
+					gzPw.CloseWithError(err)
+					return
+				}
+				gzPw.Close()
+			}()
+			src = gzPr
+		}
+		if err := writer.writeFileStream("file", path, src); err != nil {
+			pw.CloseWithError(err)
+			return
+		}
+		if err := writer.close(); err != nil {
+			pw.CloseWithError(err)
+			return
+		}
+		pw.Close()
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, pr)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.contentType())
+	if o.gzip {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
+	setReqidHeader(ctx, req)
+
+	httpClient := fs.sandbox.client.config.HTTPClient
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("upload file: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := checkHTTPResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return fs.GetInfo(ctx, path, opts...)
+}
 type WriteEntry struct {
 	// Path is the destination path inside the sandbox.
 	Path string

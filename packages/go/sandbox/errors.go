@@ -129,6 +129,8 @@ const (
 	resourceFile
 	resourceVolume
 	resourceTemplate
+	resourceBuild
+	resourceFileUpload
 )
 
 // newAPIError constructs an APIError with a classified sentinel. Use
@@ -195,6 +197,12 @@ func classifySentinel(status int, code, message string, hint resourceHint) error
 	}
 	if hint == resourceTemplate {
 		return ErrTemplate
+	}
+	if hint == resourceFileUpload {
+		return ErrFileUpload
+	}
+	if hint == resourceBuild {
+		return ErrBuild
 	}
 	return nil
 }

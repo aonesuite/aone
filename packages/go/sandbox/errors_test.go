@@ -32,6 +32,9 @@ func TestClassifySentinel(t *testing.T) {
 		{"git upstream msg", http.StatusBadGateway, "", "git remote unreachable", resourceUnknown, ErrGitUpstream},
 		{"template version", http.StatusBadRequest, "", "template version mismatch", resourceUnknown, ErrTemplate},
 		{"volume hint fallback", http.StatusInternalServerError, "", "", resourceVolume, ErrVolume},
+		{"build hint fallback", http.StatusInternalServerError, "", "", resourceBuild, ErrBuild},
+		{"file upload hint fallback", http.StatusInternalServerError, "", "", resourceFileUpload, ErrFileUpload},
+		{"file upload wraps build", http.StatusInternalServerError, "", "", resourceFileUpload, ErrBuild},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

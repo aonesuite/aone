@@ -386,6 +386,16 @@ type AssignedTemplateTags struct {
 	Tags    []string
 }
 
+// TemplateTagInfo describes a single tag attached to a template build.
+type TemplateTagInfo struct {
+	// BuildID is the build the tag points to.
+	BuildID string
+	// Tag is the tag name.
+	Tag string
+	// CreatedAt is the time the tag was assigned.
+	CreatedAt time.Time
+}
+
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 

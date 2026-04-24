@@ -78,7 +78,7 @@ func (c *Client) GetTemplateBuildStatus(ctx context.Context, templateID, buildID
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceBuild)
 	}
 	return templateBuildInfoFromAPI(resp.JSON200), nil
 }
@@ -90,7 +90,7 @@ func (c *Client) GetTemplateBuildLogs(ctx context.Context, templateID, buildID s
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceBuild)
 	}
 	return templateBuildLogsFromAPI(resp.JSON200), nil
 }
@@ -107,7 +107,7 @@ func (c *Client) StartTemplateBuild(ctx context.Context, templateID, buildID str
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != 202 {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceBuild)
 	}
 	return nil
 }
@@ -119,7 +119,7 @@ func (c *Client) GetTemplateFiles(ctx context.Context, templateID, hash string) 
 		return nil, err
 	}
 	if resp.JSON201 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFileUpload)
 	}
 	return templateBuildFileUploadFromAPI(resp.JSON201), nil
 }
@@ -181,6 +181,27 @@ func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) 
 	return nil
 }
 
+// GetTemplateTags returns all tags currently attached to templateID. Mirrors
+// E2B's template.getTags().
+func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
+	resp, err := c.api.GetTemplatesTemplateIDTagsWithResponse(ctx, templateID)
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	}
+	tags := make([]TemplateTagInfo, 0, len(*resp.JSON200))
+	for _, t := range *resp.JSON200 {
+		tags = append(tags, TemplateTagInfo{
+			BuildID:   t.BuildID.String(),
+			Tag:       t.Tag,
+			CreatedAt: t.CreatedAt,
+		})
+	}
+	return tags, nil
+}
+
 // WaitForBuild polls build status until the build becomes ready, fails, or the
 // context is canceled. PollOption values control interval, backoff, and progress
 // callbacks.
@@ -199,7 +220,7 @@ func (c *Client) WaitForBuild(ctx context.Context, templateID, buildID string, o
 		case BuildStatusReady:
 			return true, info, nil
 		case BuildStatusError:
-			return true, info, fmt.Errorf("build %s/%s failed", templateID, buildID)
+			return true, info, fmt.Errorf("build %s/%s failed: %w", templateID, buildID, ErrBuild)
 		}
 		return false, nil, nil
 	})
