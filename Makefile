@@ -3,10 +3,11 @@
 # --- CLI ---------------------------------------------------------------------
 
 # Output binary for `make build`. Override with `make build OUT=/usr/local/bin/aone`.
-OUT ?= ./aone
+OUT ?= ./bin/aone
 
 # Build the aone CLI binary.
 build:
+	mkdir -p $(dir $(OUT))
 	go build -o $(OUT) .
 
 # Install the aone CLI into $GOPATH/bin (or $GOBIN).
@@ -15,6 +16,7 @@ install:
 
 # Remove the local binary produced by `make build`.
 clean:
+	rm -rf ./bin
 	rm -f ./aone
 
 # Format Go source files.
