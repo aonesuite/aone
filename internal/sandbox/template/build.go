@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/aonesuite/aone/packages/go/sandbox"
+	"github.com/aonesuite/aone/packages/go/sandbox/dockerfile"
 
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
-	"github.com/aonesuite/aone/internal/sandbox/template/dockerfile"
 )
 
 // BuildInfo holds parameters for building templates.

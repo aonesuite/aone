@@ -2,8 +2,12 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/aonesuite/aone/packages/go/sandbox/dockerfile"
+	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
 )
 
 // ReadyCmd is a shell command used to decide when a template is ready.
@@ -14,26 +18,33 @@ type ReadyCmd struct {
 func (r ReadyCmd) String() string { return r.cmd }
 
 // WaitForPort returns a readiness check that waits for a TCP port.
+// Uses ss(8) to detect a listening socket, matching E2B's waitForPort so
+// templates produced by one SDK work the same on the other.
 func WaitForPort(port int) ReadyCmd {
-	return ReadyCmd{cmd: fmt.Sprintf("python3 - <<'PY'\nimport socket, time\nfor _ in range(300):\n    s=socket.socket(); s.settimeout(1)\n    try:\n        s.connect(('127.0.0.1', %d)); s.close(); raise SystemExit(0)\n    except Exception:\n        time.sleep(1)\nraise SystemExit(1)\nPY", port)}
+	return ReadyCmd{cmd: fmt.Sprintf("ss -tuln | grep :%d", port)}
 }
 
 // WaitForURL returns a readiness check that waits for an HTTP status code.
+// Uses curl + grep so the check returns success as soon as the status
+// matches, matching E2B's waitForURL.
 func WaitForURL(rawURL string, statusCode int) ReadyCmd {
 	if statusCode == 0 {
 		statusCode = 200
 	}
-	return ReadyCmd{cmd: fmt.Sprintf("python3 - <<'PY'\nimport urllib.request, time\nfor _ in range(300):\n    try:\n        r=urllib.request.urlopen(%q, timeout=2)\n        if r.status == %d:\n            raise SystemExit(0)\n    except Exception:\n        pass\n    time.sleep(1)\nraise SystemExit(1)\nPY", rawURL, statusCode)}
+	cmd := fmt.Sprintf(`curl -s -o /dev/null -w "%%{http_code}" %s | grep -q "%d"`, rawURL, statusCode)
+	return ReadyCmd{cmd: cmd}
 }
 
 // WaitForProcess returns a readiness check that waits for a process name.
+// Uses pgrep (matching on process name rather than full command line) to
+// match E2B's waitForProcess.
 func WaitForProcess(processName string) ReadyCmd {
-	return ReadyCmd{cmd: "pgrep -f " + shellQuote(processName)}
+	return ReadyCmd{cmd: "pgrep " + shellQuote(processName) + " > /dev/null"}
 }
 
 // WaitForFile returns a readiness check that waits for a file path.
 func WaitForFile(filename string) ReadyCmd {
-	return ReadyCmd{cmd: "test -e " + shellQuote(filename)}
+	return ReadyCmd{cmd: "[ -f " + shellQuote(filename) + " ]"}
 }
 
 // WaitForTimeout returns a readiness check that waits for timeoutSeconds.
@@ -50,6 +61,8 @@ type TemplateBuilder struct {
 	readyCmd          *string
 	steps             []TemplateStep
 	force             bool
+	contextPath       string
+	ignorePatterns    []string
 }
 
 // NewTemplate creates a new fluent template builder.
@@ -108,6 +121,65 @@ func (t *TemplateBuilder) FromTemplate(template string) *TemplateBuilder {
 	t.fromTemplate = &template
 	t.fromImage = nil
 	t.fromImageRegistry = nil
+	return t
+}
+
+// FromDockerfile parses a Dockerfile and preloads the builder with the base
+// image, converted steps, and (when present) the CMD/ENTRYPOINT start command.
+// Remaining customization (ReadyCmd, SetEnvs, extra steps) chains on the
+// returned builder. Mirrors E2B Template.fromDockerfile.
+func (t *TemplateBuilder) FromDockerfile(content string) (*TemplateBuilder, error) {
+	result, err := ConvertDockerfile(content)
+	if err != nil {
+		return nil, err
+	}
+	t.FromImage(result.BaseImage)
+	applyConvertedSteps(t, result.Steps)
+	if result.StartCmd != "" {
+		t.SetStartCmd(result.StartCmd, WaitForTimeout(20))
+	}
+	return t, nil
+}
+
+// FromRegistry starts the build from a private container registry using
+// username/password authentication. Equivalent to E2B's fromRegistry.
+func (t *TemplateBuilder) FromRegistry(image, username, password string) *TemplateBuilder {
+	reg := apis.GeneralRegistry{Username: username, Password: password, Type: "registry"}
+	payload, _ := json.Marshal(reg)
+	raw := FromImageRegistry(payload)
+	t.fromImage = &image
+	t.fromImageRegistry = &raw
+	t.fromTemplate = nil
+	return t
+}
+
+// FromAWSRegistry starts the build from an AWS ECR image using the supplied
+// credentials. Equivalent to E2B's fromAWSRegistry.
+func (t *TemplateBuilder) FromAWSRegistry(image, accessKeyID, secretAccessKey, region string) *TemplateBuilder {
+	reg := apis.AWSRegistry{
+		AwsAccessKeyID:     accessKeyID,
+		AwsSecretAccessKey: secretAccessKey,
+		AwsRegion:          region,
+		Type:               "aws",
+	}
+	payload, _ := json.Marshal(reg)
+	raw := FromImageRegistry(payload)
+	t.fromImage = &image
+	t.fromImageRegistry = &raw
+	t.fromTemplate = nil
+	return t
+}
+
+// FromGCPRegistry starts the build from a Google Cloud Artifact / Container
+// Registry image using a service-account JSON. Equivalent to E2B's
+// fromGCPRegistry.
+func (t *TemplateBuilder) FromGCPRegistry(image, serviceAccountJSON string) *TemplateBuilder {
+	reg := apis.GCPRegistry{ServiceAccountJSON: serviceAccountJSON, Type: "gcp"}
+	payload, _ := json.Marshal(reg)
+	raw := FromImageRegistry(payload)
+	t.fromImage = &image
+	t.fromImageRegistry = &raw
+	t.fromTemplate = nil
 	return t
 }
 
@@ -220,10 +292,67 @@ func (t *TemplateBuilder) SetEnvs(envs map[string]string) *TemplateBuilder {
 	return t
 }
 
+// AddMcpServer appends an MCP_SERVER step for each server name. Mirrors E2B
+// addMcpServer: the aone build system interprets these as MCP registrations
+// so sandboxes spawned from the template auto-start the requested servers.
+func (t *TemplateBuilder) AddMcpServer(servers ...string) *TemplateBuilder {
+	for _, name := range servers {
+		if name == "" {
+			continue
+		}
+		t.AddStep("MCP_SERVER", name)
+	}
+	return t
+}
+
 func (t *TemplateBuilder) SkipCache() *TemplateBuilder {
 	t.force = true
 	return t
 }
+
+// ForceBuild is an alias for SkipCache that matches E2B's naming. All
+// subsequent AddStep calls (and the final build) will bypass the layer
+// cache.
+func (t *TemplateBuilder) ForceBuild() *TemplateBuilder {
+	return t.SkipCache()
+}
+
+// ForceNextLayer flips the cache-bypass flag for just the next step added,
+// then restores the previous value. Useful when only one layer needs a
+// forced rebuild (for example a RUN that pulls fresh upstream content).
+func (t *TemplateBuilder) ForceNextLayer(fn func(*TemplateBuilder)) *TemplateBuilder {
+	prev := t.force
+	t.force = true
+	fn(t)
+	t.force = prev
+	return t
+}
+
+// SetContextPath records the local build-context directory used by COPY
+// steps. When set, the SDK/CLI upload path can hash and upload files
+// relative to this directory and automatically respects the .dockerignore
+// file located there. Mirrors how `docker build <context>` behaves.
+//
+// Calling SetContextPath also reloads .dockerignore from contextPath, so
+// late edits to that file before Build start will be honored as long as
+// SetContextPath is called after the edit.
+func (t *TemplateBuilder) SetContextPath(contextPath string) *TemplateBuilder {
+	t.contextPath = contextPath
+	if contextPath != "" {
+		t.ignorePatterns = readDockerignorePatterns(contextPath)
+	} else {
+		t.ignorePatterns = nil
+	}
+	return t
+}
+
+// ContextPath returns the build-context directory previously set with
+// SetContextPath. Empty string means no context has been configured.
+func (t *TemplateBuilder) ContextPath() string { return t.contextPath }
+
+// IgnorePatterns returns the .dockerignore patterns loaded by SetContextPath.
+// The slice is owned by the builder; callers must not modify it.
+func (t *TemplateBuilder) IgnorePatterns() []string { return t.ignorePatterns }
 
 func (t *TemplateBuilder) SetStartCmd(start string, ready ReadyCmd) *TemplateBuilder {
 	t.startCmd = &start
@@ -328,4 +457,10 @@ func quoteAll(values []string) []string {
 		out[i] = shellQuote(v)
 	}
 	return out
+}
+
+// readDockerignorePatterns wraps dockerfile.ReadDockerignore so the builder
+// does not need to import the subpackage from every call site.
+func readDockerignorePatterns(contextPath string) []string {
+	return dockerfile.ReadDockerignore(contextPath)
 }

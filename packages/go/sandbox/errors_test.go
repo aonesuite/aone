@@ -73,3 +73,18 @@ func TestIsNotFoundError(t *testing.T) {
 		t.Fatal("isNotFoundError should not match random error")
 	}
 }
+
+func TestAPIErrorRetryAfter(t *testing.T) {
+	resp := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+	resp.Header.Set("Retry-After", "5")
+	err := newAPIErrorFor(resp, nil, resourceUnknown)
+	if err.RetryAfter.Seconds() != 5 {
+		t.Fatalf("retry-after %v, want 5s", err.RetryAfter)
+	}
+
+	resp2 := &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{}}
+	err2 := newAPIErrorFor(resp2, nil, resourceUnknown)
+	if err2.RetryAfter != 0 {
+		t.Fatalf("expected zero retry-after when header absent, got %v", err2.RetryAfter)
+	}
+}

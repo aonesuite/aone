@@ -10,10 +10,11 @@ import (
 type PollOption func(*pollOpts)
 
 type pollOpts struct {
-	interval    time.Duration
-	maxInterval time.Duration
-	backoff     float64
-	onPoll      func(attempt int)
+	interval     time.Duration
+	maxInterval  time.Duration
+	backoff      float64
+	onPoll       func(attempt int)
+	onBuildLogs  func([]BuildLogEntry)
 }
 
 func defaultPollOpts(defaultInterval time.Duration) *pollOpts {
@@ -44,6 +45,14 @@ func WithBackoff(multiplier float64, maxInterval time.Duration) PollOption {
 // attempt is numbered 1.
 func WithOnPoll(fn func(attempt int)) PollOption {
 	return func(o *pollOpts) { o.onPoll = fn }
+}
+
+// WithOnBuildLogs registers a callback invoked with newly observed build log
+// entries on each poll tick of WaitForBuild. Only entries not seen on
+// previous ticks are passed in, so the callback forms a stream. When nil or
+// unset, WaitForBuild does not fetch logs. Mirrors E2B's onBuildLogs.
+func WithOnBuildLogs(fn func([]BuildLogEntry)) PollOption {
+	return func(o *pollOpts) { o.onBuildLogs = fn }
 }
 
 func pollLoop[T any](ctx context.Context, opts *pollOpts, pollFn func() (bool, T, error)) (T, error) {

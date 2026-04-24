@@ -202,16 +202,48 @@ func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]Temp
 	return tags, nil
 }
 
+// AssignTags is a shorter alias for AssignTemplateTags to align with E2B
+// naming. Prefer AssignTemplateTags when writing new code.
+func (c *Client) AssignTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
+	return c.AssignTemplateTags(ctx, body)
+}
+
+// RemoveTags is a shorter alias for DeleteTemplateTags to align with E2B
+// naming. Prefer DeleteTemplateTags when writing new code.
+func (c *Client) RemoveTags(ctx context.Context, body DeleteTagsParams) error {
+	return c.DeleteTemplateTags(ctx, body)
+}
+
+// GetTags is a shorter alias for GetTemplateTags to align with E2B naming.
+func (c *Client) GetTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
+	return c.GetTemplateTags(ctx, templateID)
+}
+
 // WaitForBuild polls build status until the build becomes ready, fails, or the
-// context is canceled. PollOption values control interval, backoff, and progress
-// callbacks.
+// context is canceled. PollOption values control interval, backoff, progress
+// callbacks, and optional build-log streaming via WithOnBuildLogs.
 func (c *Client) WaitForBuild(ctx context.Context, templateID, buildID string, opts ...PollOption) (*TemplateBuildInfo, error) {
 	o := defaultPollOpts(2 * time.Second)
 	for _, fn := range opts {
 		fn(o)
 	}
 
+	// Track the latest log timestamp we've already delivered so we only
+	// forward new entries on subsequent ticks.
+	var cursor *time.Time
+
 	return pollLoop(ctx, o, func() (bool, *TemplateBuildInfo, error) {
+		if o.onBuildLogs != nil {
+			logs, lerr := c.GetTemplateBuildLogs(ctx, templateID, buildID, logsFromCursor(cursor))
+			if lerr == nil && logs != nil && len(logs.Logs) > 0 {
+				fresh := filterNewLogs(logs.Logs, cursor)
+				if len(fresh) > 0 {
+					o.onBuildLogs(fresh)
+					ts := fresh[len(fresh)-1].Timestamp
+					cursor = &ts
+				}
+			}
+		}
 		info, err := c.GetTemplateBuildStatus(ctx, templateID, buildID, nil)
 		if err != nil {
 			return false, nil, fmt.Errorf("get build status %s/%s: %w", templateID, buildID, err)
@@ -224,4 +256,28 @@ func (c *Client) WaitForBuild(ctx context.Context, templateID, buildID string, o
 		}
 		return false, nil, nil
 	})
+}
+
+// logsFromCursor builds a GetBuildLogsParams advancing past the supplied
+// timestamp so already-seen entries are not fetched again.
+func logsFromCursor(cursor *time.Time) *GetBuildLogsParams {
+	if cursor == nil {
+		return nil
+	}
+	ts := cursor.UnixMilli() + 1
+	return &GetBuildLogsParams{Cursor: &ts}
+}
+
+// filterNewLogs returns entries strictly newer than cursor, preserving order.
+func filterNewLogs(logs []BuildLogEntry, cursor *time.Time) []BuildLogEntry {
+	if cursor == nil {
+		return logs
+	}
+	out := logs[:0:0]
+	for _, e := range logs {
+		if e.Timestamp.After(*cursor) {
+			out = append(out, e)
+		}
+	}
+	return out
 }

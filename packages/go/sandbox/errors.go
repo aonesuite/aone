@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 )
@@ -90,6 +92,11 @@ type APIError struct {
 	// Message is the human-readable error message parsed from a JSON body.
 	Message string
 
+	// RetryAfter is the Retry-After delay the server asked the caller to
+	// wait before retrying. Populated for 429 / 503 responses that include
+	// the header; zero otherwise.
+	RetryAfter time.Duration
+
 	// sentinel is the typed error this APIError unwraps to. Enables
 	// errors.Is(err, ErrSandboxNotFound) style checks.
 	sentinel error
@@ -147,8 +154,27 @@ func newAPIErrorFor(resp *http.Response, body []byte, hint resourceHint) *APIErr
 		Reqid:      resp.Header.Get("X-Reqid"),
 	}
 	e.Code, e.Message = parseAPIErrorBody(body)
+	e.RetryAfter = parseRetryAfter(resp.Header.Get("Retry-After"))
 	e.sentinel = classifySentinel(e.StatusCode, e.Code, e.Message, hint)
 	return e
+}
+
+// parseRetryAfter decodes the Retry-After header per RFC 7231: either an
+// integer number of seconds or an HTTP-date. Returns zero when the header is
+// absent or malformed so callers can fall back to their own backoff strategy.
+func parseRetryAfter(v string) time.Duration {
+	if v == "" {
+		return 0
+	}
+	if secs, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && secs >= 0 {
+		return time.Duration(secs) * time.Second
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		if d := time.Until(t); d > 0 {
+			return d
+		}
+	}
+	return 0
 }
 
 // classifySentinel maps an HTTP response to a sentinel error. Hints from the
