@@ -165,7 +165,7 @@ func (c *Client) Connect(ctx context.Context, sandboxID string, params ConnectPa
 	} else if resp.JSON201 != nil {
 		sb = newSandbox(c, resp.JSON201)
 	} else {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	if !sb.envdTokenLoaded {
 		if err := sb.refreshEnvdToken(ctx); err != nil {
@@ -206,7 +206,7 @@ func (s *Sandbox) Kill(ctx context.Context) error {
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIError(resp.HTTPResponse, resp.Body)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ func (s *Sandbox) SetTimeout(ctx context.Context, timeout time.Duration) error {
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIError(resp.HTTPResponse, resp.Body)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
 }
@@ -240,7 +240,7 @@ func (s *Sandbox) refreshEnvdToken(ctx context.Context) error {
 		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, err)
 	}
 	if resp.JSON200 == nil {
-		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, newAPIError(resp.HTTPResponse, resp.Body))
+		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox))
 	}
 	s.envdTokenMu.Lock()
 	s.envdAccessToken = resp.JSON200.EnvdAccessToken
@@ -256,7 +256,7 @@ func (s *Sandbox) GetInfo(ctx context.Context) (*SandboxInfo, error) {
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return sandboxInfoFromAPI(resp.JSON200), nil
 }
@@ -292,7 +292,7 @@ func (s *Sandbox) GetMetrics(ctx context.Context, params *GetMetricsParams) ([]S
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return sandboxMetricsFromAPI(*resp.JSON200), nil
 }
@@ -304,7 +304,7 @@ func (s *Sandbox) GetLogs(ctx context.Context, params *GetLogsParams) (*SandboxL
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return sandboxLogsFromAPI(resp.JSON200), nil
 }
@@ -316,7 +316,7 @@ func (s *Sandbox) Pause(ctx context.Context) error {
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIError(resp.HTTPResponse, resp.Body)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
 }
@@ -328,7 +328,7 @@ func (s *Sandbox) Refresh(ctx context.Context, params RefreshParams) error {
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIError(resp.HTTPResponse, resp.Body)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
 }

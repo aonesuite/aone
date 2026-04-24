@@ -258,7 +258,7 @@ func checkHTTPResponse(resp *http.Response) error {
 		return nil
 	}
 	body, _ := io.ReadAll(resp.Body)
-	return newAPIError(resp, body)
+	return newAPIErrorFor(resp, body, resourceFile)
 }
 
 // Read downloads the complete file at path into memory. For large files, prefer

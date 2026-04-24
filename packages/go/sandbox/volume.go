@@ -3,7 +3,9 @@ package sandbox
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -65,7 +67,7 @@ func (c *Client) CreateVolume(ctx context.Context, name string) (*Volume, error)
 		return nil, err
 	}
 	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
 	}
 	return volumeFromAPI(c, *resp.JSON201), nil
 }
@@ -82,7 +84,7 @@ func (c *Client) GetVolumeInfo(ctx context.Context, volumeID string) (*Volume, e
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
 	}
 	return volumeFromAPI(c, *resp.JSON200), nil
 }
@@ -94,7 +96,7 @@ func (c *Client) ListVolumes(ctx context.Context) ([]VolumeInfo, error) {
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
 	}
 	out := make([]VolumeInfo, len(*resp.JSON200))
 	for i, volume := range *resp.JSON200 {
@@ -115,7 +117,7 @@ func (c *Client) DestroyVolume(ctx context.Context, volumeID string) (bool, erro
 	case http.StatusNotFound:
 		return false, nil
 	default:
-		return false, newAPIError(resp.HTTPResponse, resp.Body)
+		return false, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
 	}
 }
 
@@ -135,7 +137,7 @@ func (v *Volume) List(ctx context.Context, path string, depth *int32) ([]VolumeE
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	out := make([]VolumeEntryStat, len(*resp.JSON200))
 	for i, entry := range *resp.JSON200 {
@@ -155,7 +157,7 @@ func (v *Volume) MakeDir(ctx context.Context, path string, opts *VolumeWriteOpti
 		return nil, err
 	}
 	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	out := volumeEntryFromAPI(*resp.JSON201)
 	return &out, nil
@@ -172,7 +174,7 @@ func (v *Volume) GetInfo(ctx context.Context, path string) (*VolumeEntryStat, er
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	out := volumeEntryFromAPI(*resp.JSON200)
 	return &out, nil
@@ -209,7 +211,7 @@ func (v *Volume) UpdateMetadata(ctx context.Context, path string, opts *VolumeWr
 		return nil, err
 	}
 	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	out := volumeEntryFromAPI(*resp.JSON200)
 	return &out, nil
@@ -226,7 +228,7 @@ func (v *Volume) ReadFile(ctx context.Context, path string) ([]byte, error) {
 		return nil, err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	return resp.Body, nil
 }
@@ -248,9 +250,57 @@ func (v *Volume) WriteFile(ctx context.Context, path string, data []byte, opts *
 		return nil, err
 	}
 	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	out := volumeEntryFromAPI(*resp.JSON201)
+	return &out, nil
+}
+
+// ReadFileStream streams a volume file without buffering it in memory. The
+// caller MUST close the returned reader; failing to do so leaks the HTTP
+// connection. For small files prefer ReadFile or ReadFileText.
+func (v *Volume) ReadFileStream(ctx context.Context, path string) (io.ReadCloser, error) {
+	client, err := v.contentClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.GetVolumecontentVolumeIDFile(ctx, v.VolumeID, &volumeapi.GetVolumecontentVolumeIDFileParams{Path: path})
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, newAPIErrorFor(resp, body, resourceFile)
+	}
+	return resp.Body, nil
+}
+
+// WriteFileFromReader uploads a volume file from r without buffering it in
+// memory. The reader is consumed to EOF; the caller retains ownership. This
+// avoids the []byte round-trip of WriteFile for large payloads.
+func (v *Volume) WriteFileFromReader(ctx context.Context, path string, r io.Reader, opts *VolumeWriteOptions) (*VolumeEntryStat, error) {
+	client, err := v.contentClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.PutVolumecontentVolumeIDFileWithBody(ctx, v.VolumeID, writeFileParams(path, opts), "application/octet-stream", r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusCreated {
+		return nil, newAPIErrorFor(resp, body, resourceFile)
+	}
+	var entry volumeapi.VolumeEntryStat
+	if err := json.Unmarshal(body, &entry); err != nil {
+		return nil, fmt.Errorf("decode volume entry: %w", err)
+	}
+	out := volumeEntryFromAPI(entry)
 	return &out, nil
 }
 
@@ -265,7 +315,7 @@ func (v *Volume) Remove(ctx context.Context, path string) error {
 		return err
 	}
 	if resp.HTTPResponse.StatusCode != http.StatusOK && resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIError(resp.HTTPResponse, resp.Body)
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFile)
 	}
 	return nil
 }

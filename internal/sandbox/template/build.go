@@ -226,7 +226,7 @@ func buildFromDockerfile(ctx context.Context, client *sandbox.Client, templateID
 	}
 
 	// Parse the Dockerfile.
-	result, err := dockerfile.Convert(string(content))
+	result, err := sandbox.ConvertDockerfile(string(content))
 	if err != nil {
 		return fmt.Errorf("parse Dockerfile: %w", err)
 	}
