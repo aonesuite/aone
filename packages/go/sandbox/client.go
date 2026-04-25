@@ -127,12 +127,19 @@ func reqidEditor() apis.RequestEditorFn {
 	}
 }
 
+// apiKeyEditor injects API key authentication headers. To stay compatible
+// with gateways that accept either form, it sets both X-API-Key and
+// Authorization: Bearer. If the caller already pre-set an Authorization
+// header (for example a request signed with custom credentials), the
+// editor leaves it alone and skips both headers so the caller's choice
+// wins.
 func apiKeyEditor(apiKey string) apis.RequestEditorFn {
 	return func(ctx context.Context, req *http.Request) error {
 		if req.Header.Get("Authorization") != "" {
 			return nil
 		}
 		req.Header.Set("X-API-Key", apiKey)
+		req.Header.Set("Authorization", "Bearer "+apiKey)
 		return nil
 	}
 }

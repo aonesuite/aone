@@ -93,6 +93,9 @@ func TestAPIKeyEditorSetsHeader(t *testing.T) {
 	if got := req.Header.Get("X-API-Key"); got != "secret" {
 		t.Errorf("X-API-Key = %q, want %q", got, "secret")
 	}
+	if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+		t.Errorf("Authorization = %q, want %q", got, "Bearer secret")
+	}
 }
 
 func TestAPIKeyEditorPreservesAuthorization(t *testing.T) {
@@ -104,6 +107,9 @@ func TestAPIKeyEditorPreservesAuthorization(t *testing.T) {
 	}
 	if req.Header.Get("X-API-Key") != "" {
 		t.Error("X-API-Key should not override existing Authorization")
+	}
+	if got := req.Header.Get("Authorization"); got != "Bearer abc" {
+		t.Errorf("Authorization = %q, want caller value preserved", got)
 	}
 }
 
