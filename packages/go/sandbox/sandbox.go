@@ -321,6 +321,36 @@ func (s *Sandbox) Pause(ctx context.Context) error {
 	return nil
 }
 
+// ResumeParams configures a Resume call. Both fields are optional; nil values
+// instruct the server to use its defaults.
+type ResumeParams struct {
+	// Timeout is the new TTL (seconds) for the resumed sandbox. Nil keeps
+	// the server-side default.
+	Timeout *int32
+
+	// AutoPause re-arms automatic pause-on-timeout for the resumed sandbox.
+	// Deprecated by the API but kept here so callers preserving legacy
+	// behavior can pass it through.
+	AutoPause *bool
+}
+
+// Resume resumes a paused sandbox. The HTTP path is POST /sandboxes/{id}/resume
+// and a 201 response indicates success.
+func (c *Client) Resume(ctx context.Context, sandboxID string, params ResumeParams) error {
+	body := apis.PostSandboxesSandboxIDResumeJSONRequestBody{
+		Timeout:   params.Timeout,
+		AutoPause: params.AutoPause,
+	}
+	resp, err := c.api.PostSandboxesSandboxIDResumeWithResponse(ctx, sandboxID, body)
+	if err != nil {
+		return err
+	}
+	if resp.HTTPResponse.StatusCode != http.StatusCreated {
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
+	}
+	return nil
+}
+
 // Refresh extends the sandbox lifetime using the duration in params.
 func (s *Sandbox) Refresh(ctx context.Context, params RefreshParams) error {
 	resp, err := s.client.api.PostSandboxesSandboxIDRefreshesWithResponse(ctx, s.sandboxID, params.toAPI())

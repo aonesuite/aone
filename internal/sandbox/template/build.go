@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/aonesuite/aone/internal/config"
 	"github.com/aonesuite/aone/packages/go/sandbox"
 	"github.com/aonesuite/aone/packages/go/sandbox/dockerfile"
 
@@ -51,12 +52,36 @@ type BuildInfo struct {
 
 	// Path is the build context directory and defaults to the Dockerfile directory.
 	Path string
+
+	// ConfigPath, when non-empty, points at an explicit aone.sandbox.toml.
+	// Otherwise the file is looked up under Path (or CWD).
+	ConfigPath string
+
+	// SaveConfig, when true, writes the resolved template_id, name, and
+	// resource fields back to aone.sandbox.toml after a successful build
+	// or template creation. Defaults to true at the CLI layer.
+	SaveConfig bool
 }
 
 // Build creates or rebuilds a template.
 // When TemplateID is provided, it starts a new build for an existing template.
 // Otherwise, it creates a new template using Name and starts its first build.
 func Build(info BuildInfo) {
+	// Pull defaults from aone.sandbox.toml when fields are missing. Flag
+	// values always win; the file fills in the blanks so users can re-run
+	// `aone sandbox template build` without re-typing every option.
+	projectCfg, projectLoc, pErr := config.LoadProject(info.ConfigPath, info.Path)
+	if pErr != nil {
+		sbClient.PrintError("%v", pErr)
+		return
+	}
+	if projectCfg != nil {
+		applyProjectDefaults(&info, projectCfg)
+		if projectLoc != nil && projectLoc.Legacy {
+			sbClient.PrintWarn("Loaded legacy config %s; consider renaming to %s", projectLoc.Path, config.ProjectFileName)
+		}
+	}
+
 	client, err := sbClient.NewSandboxClient()
 	if err != nil {
 		sbClient.PrintError("%v", err)
@@ -93,6 +118,15 @@ func Build(info BuildInfo) {
 		templateID = resp.TemplateID
 		buildID = resp.BuildID
 		sbClient.PrintSuccess("Template %s created (build ID: %s)", templateID, buildID)
+
+		// Persist newly assigned identifiers so subsequent commands can
+		// pick them up without explicit flags. Best-effort: log on failure
+		// but don't fail the build.
+		if info.SaveConfig {
+			if pErr := saveProjectFromBuild(info, projectLoc, templateID); pErr != nil {
+				sbClient.PrintWarn("could not save %s: %v", config.ProjectFileName, pErr)
+			}
+		}
 	} else {
 		// Fetch the existing template to find the latest build ID.
 		tmpl, gErr := client.GetTemplate(ctx, templateID, nil)
@@ -301,6 +335,74 @@ func buildFromDockerfile(ctx context.Context, client *sandbox.Client, templateID
 	}
 
 	return nil
+}
+
+// applyProjectDefaults fills in BuildInfo fields that are still zero from
+// the loaded project config. Flag/CLI-supplied values are never overridden.
+func applyProjectDefaults(info *BuildInfo, p *config.Project) {
+	if info.TemplateID == "" {
+		info.TemplateID = p.TemplateID
+	}
+	if info.Name == "" {
+		info.Name = p.TemplateName
+	}
+	if info.Dockerfile == "" {
+		info.Dockerfile = p.Dockerfile
+	}
+	if info.StartCmd == "" {
+		info.StartCmd = p.StartCmd
+	}
+	if info.ReadyCmd == "" {
+		info.ReadyCmd = p.ReadyCmd
+	}
+	if info.CPUCount == 0 && p.CPUCount > 0 {
+		info.CPUCount = int32(p.CPUCount)
+	}
+	if info.MemoryMB == 0 && p.MemoryMB > 0 {
+		info.MemoryMB = int32(p.MemoryMB)
+	}
+}
+
+// saveProjectFromBuild writes the resolved template id (and other fields)
+// back to the project config. When loc is nil we create a fresh file at
+// info.Path/aone.sandbox.toml; otherwise we update in place to avoid
+// surprising users with a relocated config.
+func saveProjectFromBuild(info BuildInfo, loc *config.ProjectLocation, templateID string) error {
+	dest := ""
+	switch {
+	case info.ConfigPath != "":
+		dest = info.ConfigPath
+	case loc != nil:
+		dest = loc.Path
+	default:
+		dest = config.DefaultProjectPath(info.Path)
+	}
+
+	// Re-read to preserve any fields we don't manage here (forward-compat).
+	existing, _, _ := config.LoadProject(dest, "")
+	if existing == nil {
+		existing = &config.Project{}
+	}
+	existing.TemplateID = templateID
+	if info.Name != "" {
+		existing.TemplateName = info.Name
+	}
+	if info.Dockerfile != "" {
+		existing.Dockerfile = info.Dockerfile
+	}
+	if info.StartCmd != "" {
+		existing.StartCmd = info.StartCmd
+	}
+	if info.ReadyCmd != "" {
+		existing.ReadyCmd = info.ReadyCmd
+	}
+	if info.CPUCount > 0 {
+		existing.CPUCount = int(info.CPUCount)
+	}
+	if info.MemoryMB > 0 {
+		existing.MemoryMB = int(info.MemoryMB)
+	}
+	return config.SaveProject(existing, dest)
 }
 
 // printSDKExamples prints SDK usage examples for the given template ID.

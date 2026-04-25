@@ -7,6 +7,7 @@ import (
 	"github.com/aonesuite/aone/packages/go/sandbox"
 	"github.com/charmbracelet/huh"
 
+	"github.com/aonesuite/aone/internal/config"
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
 )
 
@@ -16,10 +17,20 @@ type PublishInfo struct {
 	Yes         bool     // Skip confirmation
 	Select      bool     // Interactive multi-select from template list
 	Public      bool     // true = publish, false = unpublish
+	ConfigPath  string   // Optional explicit aone.sandbox.toml path
+	Path        string   // Project root used for config lookup
 }
 
 // Publish publishes or unpublishes one or more templates.
 func Publish(info PublishInfo) {
+	// Inside an initialized project we can resolve the template id from
+	// aone.sandbox.toml so `template publish` doesn't need any positional.
+	if len(info.TemplateIDs) == 0 && !info.Select {
+		if p, _, err := config.LoadProject(info.ConfigPath, info.Path); err == nil && p != nil && p.TemplateID != "" {
+			info.TemplateIDs = []string{p.TemplateID}
+		}
+	}
+
 	client, err := sbClient.NewSandboxClient()
 	if err != nil {
 		sbClient.PrintError("%v", err)

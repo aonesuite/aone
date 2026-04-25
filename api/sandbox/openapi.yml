@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   title: Sandbox API
 servers:
-- url: https://api.aonesuite.com/sandbox
+- url: https://sandbox.aonesuite.com
 components:
   parameters:
     templateID:

@@ -1,19 +1,17 @@
 package sandbox
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/aonesuite/aone/internal/config"
 	"github.com/aonesuite/aone/packages/go/sandbox"
 	"github.com/subosito/gotenv"
 )
 
-// keepalivePingIntervalSec matches the JS SDK's KEEPALIVE_PING_INTERVAL_SEC (50s).
+// keepalivePingIntervalSec matches the upstream SDK's KEEPALIVE_PING_INTERVAL_SEC (50s).
 // This header tells the envd server to send periodic keepalive pings on gRPC streams,
 // preventing proxies/load balancers from closing idle connections.
 const keepalivePingIntervalSec = "50"
@@ -33,10 +31,13 @@ func (t *keepaliveTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.base.RoundTrip(req)
 }
 
-// Environment variable names for sandbox configuration.
+// Environment variable names retained for backward compatibility. New code
+// should prefer the constants exported from internal/config.
 const (
-	EnvAoneSandboxAPIURL = "AONE_SANDBOX_API_URL"
-	EnvAoneAPIKey        = "AONE_API_KEY"
+	// EnvAoneSandboxAPIURL is the legacy export of config.EnvEndpoint.
+	EnvAoneSandboxAPIURL = config.EnvEndpoint
+	// EnvAoneAPIKey is the legacy export of config.EnvAPIKey.
+	EnvAoneAPIKey = config.EnvAPIKey
 )
 
 // loadDotEnv loads variables from the .env file in the current directory.
@@ -60,73 +61,48 @@ func loadDotEnv() {
 	}
 }
 
-// NewSandboxClient creates a new sandbox client by reading configuration from environment variables.
-// It first loads .env file from the current directory (OS env vars take priority).
+// NewSandboxClient creates a new sandbox client by applying the standard
+// credential precedence chain (flag > env > config file > default).
+//
+// Callers that need to honor CLI flags should use NewSandboxClientWithResolver
+// directly; this helper resolves with no flag overrides for the common path.
 func NewSandboxClient() (*sandbox.Client, error) {
+	return NewSandboxClientWithResolver(config.Resolver{})
+}
+
+// NewSandboxClientWithResolver builds a client using the given Resolver,
+// surfacing flag-level overrides on top of env + config file layers.
+func NewSandboxClientWithResolver(r config.Resolver) (*sandbox.Client, error) {
+	// Honor a project-local .env so users don't have to export every time
+	// they switch repos. OS env still wins if both are set.
 	loadDotEnv()
 
-	apiKey, endpoint := resolveConfig()
-	if apiKey == "" {
-		return nil, fmt.Errorf("API key not configured, please set %s environment variable", EnvAoneAPIKey)
+	resolved, err := r.Resolve()
+	if err != nil {
+		return nil, err
+	}
+	if resolved.APIKey == "" {
+		return nil, fmt.Errorf("API key not configured: run `aone auth login --api-key <key>` or set %s", config.EnvAPIKey)
 	}
 
 	return sandbox.NewClient(&sandbox.Config{
-		APIKey:   apiKey,
-		Endpoint: endpoint,
+		APIKey:   resolved.APIKey,
+		Endpoint: resolved.Endpoint,
 		HTTPClient: &http.Client{
 			Transport: &keepaliveTransport{base: http.DefaultTransport},
 		},
 	})
 }
 
-// resolveConfig returns the resolved API key and endpoint from environment
-// variables.
-func resolveConfig() (apiKey, endpoint string) {
-	apiKey = os.Getenv(EnvAoneAPIKey)
-	endpoint = os.Getenv(EnvAoneSandboxAPIURL)
-	if endpoint == "" {
-		endpoint = sandbox.DefaultEndpoint
+// MaskAPIKey returns a redacted form of the API key suitable for display in
+// `aone auth info`: keep a 4-char prefix and a 4-char suffix, replace the
+// middle with `****`. Short keys collapse to all asterisks.
+func MaskAPIKey(key string) string {
+	if key == "" {
+		return ""
 	}
-	return apiKey, endpoint
-}
-
-// ResumeSandbox resumes a paused sandbox by calling POST /sandboxes/{id}/resume.
-// The SDK Client does not expose a Resume method, so we call the API directly.
-func ResumeSandbox(sandboxID string, timeout *int32) error {
-	loadDotEnv()
-
-	apiKey, endpoint := resolveConfig()
-	if apiKey == "" {
-		return fmt.Errorf("API key not configured, please set %s environment variable", EnvAoneAPIKey)
+	if len(key) <= 8 {
+		return strings.Repeat("*", len(key))
 	}
-
-	body := map[string]any{}
-	if timeout != nil {
-		body["timeout"] = *timeout
-	}
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("marshal request body: %w", err)
-	}
-
-	url := fmt.Sprintf("%s/sandboxes/%s/resume", strings.TrimRight(endpoint, "/"), sandboxID)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(jsonBody))
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", apiKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("resume request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusCreated {
-		return nil
-	}
-
-	respBody, _ := io.ReadAll(resp.Body)
-	return fmt.Errorf("api error: status %d, body: %s", resp.StatusCode, string(respBody))
+	return key[:4] + strings.Repeat("*", 4) + key[len(key)-4:]
 }

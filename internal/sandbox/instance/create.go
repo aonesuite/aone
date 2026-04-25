@@ -7,6 +7,7 @@ import (
 
 	"github.com/aonesuite/aone/packages/go/sandbox"
 
+	"github.com/aonesuite/aone/internal/config"
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
 )
 
@@ -18,14 +19,29 @@ type CreateInfo struct {
 	Detach     bool
 	EnvVars    []string // KEY=VALUE pairs
 	AutoPause  bool
+
+	// ConfigPath optionally points at an explicit aone.sandbox.toml. When
+	// empty, the file is looked up under Path (or CWD).
+	ConfigPath string
+
+	// Path is the project root used to locate aone.sandbox.toml when
+	// TemplateID is not provided on the command line.
+	Path string
 }
 
 // Create creates a new sandbox and connects to its terminal.
 // When the terminal session ends, the sandbox is killed.
 // The sandbox stays alive through keep-alive pings in the terminal session.
 func Create(info CreateInfo) {
+	// Fall back to the project config so `aone sandbox create` works inside
+	// an initialized project without re-typing the template id.
 	if info.TemplateID == "" {
-		sbClient.PrintError("template ID is required")
+		if p, _, err := config.LoadProject(info.ConfigPath, info.Path); err == nil && p != nil && p.TemplateID != "" {
+			info.TemplateID = p.TemplateID
+		}
+	}
+	if info.TemplateID == "" {
+		sbClient.PrintError("template ID is required (pass as argument or set template_id in aone.sandbox.toml)")
 		return
 	}
 

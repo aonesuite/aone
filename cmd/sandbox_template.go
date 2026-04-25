@@ -16,8 +16,8 @@ func newTemplateCmd() *cobra.Command {
 	}
 
 	// `build` is kept as an internal low-level command (hidden) so the
-	// primary surface matches the e2b CLI: `create` drives Dockerfile builds
-	// and `migrate` converts Dockerfiles to SDK template code.
+	// primary surface stays focused: `create` drives Dockerfile builds and
+	// `migrate` converts Dockerfiles to SDK template code.
 	buildCmd := newTemplateBuildCmd()
 	buildCmd.Hidden = true
 
@@ -75,6 +75,8 @@ func newTemplateDeleteCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&info.Yes, "yes", "y", false, "skip confirmation")
 	cmd.Flags().BoolVarP(&info.Select, "select", "s", false, "interactively select templates")
+	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root used to locate aone.sandbox.toml")
 	return cmd
 }
 
@@ -91,7 +93,7 @@ func newTemplateBuildsCmd() *cobra.Command {
 }
 
 func newTemplateBuildCmd() *cobra.Command {
-	info := template.BuildInfo{}
+	info := template.BuildInfo{SaveConfig: true}
 	cmd := &cobra.Command{
 		Use:     "build",
 		Aliases: []string{"bd"},
@@ -111,7 +113,8 @@ func newTemplateBuildCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&info.Wait, "wait", false, "wait for build to complete")
 	cmd.Flags().BoolVar(&info.NoCache, "no-cache", false, "force full rebuild ignoring cache")
 	cmd.Flags().StringVar(&info.Dockerfile, "dockerfile", "", "path to Dockerfile")
-	cmd.Flags().StringVar(&info.Path, "path", "", "build context directory")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root (defaults to current directory)")
+	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
 	return cmd
 }
 
@@ -132,6 +135,8 @@ func newTemplatePublishCmd(public bool) *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&info.Yes, "yes", "y", false, "skip confirmation")
 	cmd.Flags().BoolVarP(&info.Select, "select", "s", false, "interactively select templates")
+	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root used to locate aone.sandbox.toml")
 	return cmd
 }
 
@@ -146,17 +151,18 @@ func newTemplateInitCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&info.Name, "name", "", "template project name")
-	cmd.Flags().StringVar(&info.Language, "language", "", "programming language (go, typescript, python)")
-	cmd.Flags().StringVar(&info.Path, "path", "", "output directory")
+	cmd.Flags().StringVarP(&info.Language, "language", "l", "", "programming language (go, typescript, python)")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "output directory")
 	return cmd
 }
 
-// newTemplateCreateCmd builds a Dockerfile as a sandbox template directly,
-// mirroring the e2b CLI `template create` command. The template name is the
-// only required positional argument; Dockerfile and resource options are
-// provided via flags.
+// newTemplateCreateCmd builds a Dockerfile as a sandbox template directly.
+// The template name is the only required positional argument; Dockerfile and
+// resource options are provided via flags. After a successful build the
+// resolved template_id is written back to aone.sandbox.toml under --path
+// (or the directory containing the Dockerfile).
 func newTemplateCreateCmd() *cobra.Command {
-	info := template.BuildInfo{}
+	info := template.BuildInfo{SaveConfig: true}
 	cmd := &cobra.Command{
 		Use:     "create <template-name>",
 		Aliases: []string{"ct"},
@@ -167,8 +173,9 @@ func newTemplateCreateCmd() *cobra.Command {
 			template.Create(info)
 		},
 	}
-	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to e2b.Dockerfile or Dockerfile)")
-	cmd.Flags().StringVar(&info.Path, "path", "", "build context directory (defaults to Dockerfile directory)")
+	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to aone.Dockerfile or Dockerfile)")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "build context directory (defaults to Dockerfile directory)")
+	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
 	cmd.Flags().StringVarP(&info.StartCmd, "cmd", "c", "", "command executed when the sandbox starts")
 	cmd.Flags().StringVar(&info.ReadyCmd, "ready-cmd", "", "readiness check command")
 	cmd.Flags().Int32Var(&info.CPUCount, "cpu-count", 0, "sandbox CPU count")
@@ -178,7 +185,7 @@ func newTemplateCreateCmd() *cobra.Command {
 }
 
 // newTemplateMigrateCmd converts a Dockerfile into SDK-native template code
-// (Go / TypeScript / Python), mirroring the e2b CLI `template migrate`.
+// for Go / TypeScript / Python.
 func newTemplateMigrateCmd() *cobra.Command {
 	info := template.MigrateInfo{}
 	cmd := &cobra.Command{
@@ -188,8 +195,8 @@ func newTemplateMigrateCmd() *cobra.Command {
 			template.Migrate(info)
 		},
 	}
-	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to e2b.Dockerfile or Dockerfile)")
-	cmd.Flags().StringVar(&info.Path, "path", "", "project root (defaults to current directory)")
+	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to aone.Dockerfile or Dockerfile)")
+	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root (defaults to current directory)")
 	cmd.Flags().StringVarP(&info.Language, "language", "l", "", "target language: go, typescript, python")
 	cmd.Flags().StringVar(&info.Name, "name", "", "template name used in generated code (defaults to directory name)")
 	return cmd

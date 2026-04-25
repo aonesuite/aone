@@ -6,11 +6,10 @@ import (
 
 // Create builds a Dockerfile as a sandbox template.
 //
-// Mirrors the e2b CLI `template create <template-name>` command: the template
-// name is the only required positional argument, Dockerfile and resource
-// options come via flags. It delegates to [Build] so the parse + upload +
-// build lifecycle stays in a single place, and defaults to waiting for the
-// build to complete.
+// The template name is the only required positional argument; Dockerfile and
+// resource options come via flags. It delegates to [Build] so the parse +
+// upload + build lifecycle stays in a single place, and defaults to waiting
+// for the build to complete.
 func Create(info BuildInfo) {
 	if info.Name == "" {
 		sbClient.PrintError("template name is required")
@@ -20,7 +19,8 @@ func Create(info BuildInfo) {
 		sbClient.PrintError("Dockerfile path is required (use -d/--dockerfile)")
 		return
 	}
-	// e2b CLI `template create` defaults to waiting for the build.
+	// `template create` defaults to waiting for the build to complete so
+	// users get a single command that produces a ready-to-use template.
 	info.Wait = true
 	Build(info)
 }

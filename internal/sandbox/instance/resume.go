@@ -17,10 +17,8 @@ type ResumeInfo struct {
 	Metadata   string // Metadata filter: key=value
 }
 
-// Resume resumes one or more paused sandboxes.
-// Uses the POST /sandboxes/{id}/resume API endpoint.
+// Resume resumes one or more paused sandboxes via the SDK Client.Resume call.
 func Resume(info ResumeInfo) {
-	// Still need the SDK client for --all listing
 	client, err := sbClient.NewSandboxClient()
 	if err != nil {
 		sbClient.PrintError("%v", err)
@@ -67,7 +65,7 @@ func Resume(info ResumeInfo) {
 		wg.Add(1)
 		go func(sandboxID string) {
 			defer wg.Done()
-			if rErr := sbClient.ResumeSandbox(sandboxID, nil); rErr != nil {
+			if rErr := client.Resume(ctx, sandboxID, sandbox.ResumeParams{}); rErr != nil {
 				sbClient.PrintError("resume sandbox %s failed: %v", sandboxID, rErr)
 				return
 			}

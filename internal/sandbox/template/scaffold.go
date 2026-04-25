@@ -28,14 +28,20 @@ var languageFiles = map[string][]struct {
 		{tmpl: "templates/go/main.go.tmpl", output: "main.go"},
 		{tmpl: "templates/go/go.mod.tmpl", output: "go.mod"},
 		{tmpl: "templates/go/Makefile.tmpl", output: "Makefile"},
+		{tmpl: "templates/go/Dockerfile.tmpl", output: "Dockerfile"},
+		{tmpl: "templates/go/aone.sandbox.toml.tmpl", output: "aone.sandbox.toml"},
 	},
 	"typescript": {
 		{tmpl: "templates/typescript/template.ts.tmpl", output: "template.ts"},
 		{tmpl: "templates/typescript/package.json.tmpl", output: "package.json"},
+		{tmpl: "templates/typescript/Dockerfile.tmpl", output: "Dockerfile"},
+		{tmpl: "templates/typescript/aone.sandbox.toml.tmpl", output: "aone.sandbox.toml"},
 	},
 	"python": {
 		{tmpl: "templates/python/template.py.tmpl", output: "template.py"},
 		{tmpl: "templates/python/requirements.txt.tmpl", output: "requirements.txt"},
+		{tmpl: "templates/python/Dockerfile.tmpl", output: "Dockerfile"},
+		{tmpl: "templates/python/aone.sandbox.toml.tmpl", output: "aone.sandbox.toml"},
 	},
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 
+	"github.com/aonesuite/aone/internal/config"
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
 )
 
@@ -14,10 +15,20 @@ type DeleteInfo struct {
 	TemplateIDs []string // One or more template IDs to delete
 	Yes         bool     // Skip confirmation
 	Select      bool     // Interactive multi-select from template list
+	ConfigPath  string   // Optional explicit aone.sandbox.toml path
+	Path        string   // Project root used for config lookup
 }
 
 // Delete deletes one or more templates.
 func Delete(info DeleteInfo) {
+	// When no IDs and no --select, fall back to the project config so
+	// `aone sandbox template delete` works inside an initialized project.
+	if len(info.TemplateIDs) == 0 && !info.Select {
+		if p, _, err := config.LoadProject(info.ConfigPath, info.Path); err == nil && p != nil && p.TemplateID != "" {
+			info.TemplateIDs = []string{p.TemplateID}
+		}
+	}
+
 	client, err := sbClient.NewSandboxClient()
 	if err != nil {
 		sbClient.PrintError("%v", err)

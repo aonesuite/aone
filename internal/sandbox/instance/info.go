@@ -21,8 +21,8 @@ type InfoInfo struct {
 }
 
 // Info prints detailed information for a single sandbox.
-// The command mirrors the e2b CLI `sandbox info` behavior: it resolves the
-// sandbox, shows a labelled summary in pretty mode, or the raw info JSON.
+// It resolves the sandbox by ID, then renders a labelled summary in pretty
+// mode (the default) or the raw info JSON when --format json is requested.
 func Info(info InfoInfo) {
 	if info.SandboxID == "" {
 		sbClient.PrintError("sandbox ID is required")
@@ -64,7 +64,6 @@ func Info(info InfoInfo) {
 }
 
 // renderPrettyInfo prints the sandbox info with human-readable labels.
-// The field order and labels match the e2b CLI output for familiarity.
 func renderPrettyInfo(d *sandbox.SandboxInfo) {
 	fmt.Printf("\nSandbox info for %s:\n", d.SandboxID)
 
