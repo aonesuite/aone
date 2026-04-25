@@ -18,15 +18,14 @@ type ReadyCmd struct {
 func (r ReadyCmd) String() string { return r.cmd }
 
 // WaitForPort returns a readiness check that waits for a TCP port.
-// Uses ss(8) to detect a listening socket, matching E2B's waitForPort so
-// templates produced by one SDK work the same on the other.
+// Uses ss(8) to detect a listening socket.
 func WaitForPort(port int) ReadyCmd {
 	return ReadyCmd{cmd: fmt.Sprintf("ss -tuln | grep :%d", port)}
 }
 
 // WaitForURL returns a readiness check that waits for an HTTP status code.
 // Uses curl + grep so the check returns success as soon as the status
-// matches, matching E2B's waitForURL.
+// matches.
 func WaitForURL(rawURL string, statusCode int) ReadyCmd {
 	if statusCode == 0 {
 		statusCode = 200
@@ -36,8 +35,7 @@ func WaitForURL(rawURL string, statusCode int) ReadyCmd {
 }
 
 // WaitForProcess returns a readiness check that waits for a process name.
-// Uses pgrep (matching on process name rather than full command line) to
-// match E2B's waitForProcess.
+// Uses pgrep (matching on process name rather than full command line).
 func WaitForProcess(processName string) ReadyCmd {
 	return ReadyCmd{cmd: "pgrep " + shellQuote(processName) + " > /dev/null"}
 }
@@ -127,7 +125,7 @@ func (t *TemplateBuilder) FromTemplate(template string) *TemplateBuilder {
 // FromDockerfile parses a Dockerfile and preloads the builder with the base
 // image, converted steps, and (when present) the CMD/ENTRYPOINT start command.
 // Remaining customization (ReadyCmd, SetEnvs, extra steps) chains on the
-// returned builder. Mirrors E2B Template.fromDockerfile.
+// returned builder.
 func (t *TemplateBuilder) FromDockerfile(content string) (*TemplateBuilder, error) {
 	result, err := ConvertDockerfile(content)
 	if err != nil {
@@ -142,7 +140,7 @@ func (t *TemplateBuilder) FromDockerfile(content string) (*TemplateBuilder, erro
 }
 
 // FromRegistry starts the build from a private container registry using
-// username/password authentication. Equivalent to E2B's fromRegistry.
+// username/password authentication.
 func (t *TemplateBuilder) FromRegistry(image, username, password string) *TemplateBuilder {
 	reg := apis.GeneralRegistry{Username: username, Password: password, Type: "registry"}
 	payload, _ := json.Marshal(reg)
@@ -154,7 +152,7 @@ func (t *TemplateBuilder) FromRegistry(image, username, password string) *Templa
 }
 
 // FromAWSRegistry starts the build from an AWS ECR image using the supplied
-// credentials. Equivalent to E2B's fromAWSRegistry.
+// credentials.
 func (t *TemplateBuilder) FromAWSRegistry(image, accessKeyID, secretAccessKey, region string) *TemplateBuilder {
 	reg := apis.AWSRegistry{
 		AwsAccessKeyID:     accessKeyID,
@@ -171,8 +169,7 @@ func (t *TemplateBuilder) FromAWSRegistry(image, accessKeyID, secretAccessKey, r
 }
 
 // FromGCPRegistry starts the build from a Google Cloud Artifact / Container
-// Registry image using a service-account JSON. Equivalent to E2B's
-// fromGCPRegistry.
+// Registry image using a service-account JSON.
 func (t *TemplateBuilder) FromGCPRegistry(image, serviceAccountJSON string) *TemplateBuilder {
 	reg := apis.GCPRegistry{ServiceAccountJSON: serviceAccountJSON, Type: "gcp"}
 	payload, _ := json.Marshal(reg)
@@ -292,9 +289,9 @@ func (t *TemplateBuilder) SetEnvs(envs map[string]string) *TemplateBuilder {
 	return t
 }
 
-// AddMcpServer appends an MCP_SERVER step for each server name. Mirrors E2B
-// addMcpServer: the aone build system interprets these as MCP registrations
-// so sandboxes spawned from the template auto-start the requested servers.
+// AddMcpServer appends an MCP_SERVER step for each server name. The build
+// system interprets these as MCP registrations, so sandboxes spawned from
+// the template auto-start the requested servers.
 func (t *TemplateBuilder) AddMcpServer(servers ...string) *TemplateBuilder {
 	for _, name := range servers {
 		if name == "" {
@@ -310,9 +307,8 @@ func (t *TemplateBuilder) SkipCache() *TemplateBuilder {
 	return t
 }
 
-// ForceBuild is an alias for SkipCache that matches E2B's naming. All
-// subsequent AddStep calls (and the final build) will bypass the layer
-// cache.
+// ForceBuild is an alias for SkipCache. All subsequent AddStep calls (and
+// the final build) will bypass the layer cache.
 func (t *TemplateBuilder) ForceBuild() *TemplateBuilder {
 	return t.SkipCache()
 }

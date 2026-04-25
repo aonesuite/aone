@@ -12,10 +12,10 @@ import (
 	"connectrpc.com/connect"
 )
 
-// Sentinel errors mirror the error taxonomy exposed by the E2B SDK so callers
-// can discriminate failure modes with errors.Is / errors.As instead of parsing
-// status codes or message strings. Most errors returned by this SDK are
-// APIError values that wrap one of these sentinels.
+// Sentinel errors expose a stable taxonomy so callers can discriminate
+// failure modes with errors.Is / errors.As instead of parsing status codes or
+// message strings. Most errors returned by this SDK are APIError values that
+// wrap one of these sentinels.
 var (
 	// ErrNotFound is the parent of all "resource missing" errors. It is
 	// wrapped by ErrSandboxNotFound and ErrFileNotFound. Callers that only
@@ -212,7 +212,7 @@ func classifySentinel(status int, code, message string, hint resourceHint) error
 		return ErrRateLimited
 	case http.StatusBadGateway, http.StatusServiceUnavailable:
 		// 502/503 from envd routes usually means the sandbox has timed
-		// out. Surface as ErrTimeout to match E2B semantics.
+		// out. Surface as ErrTimeout.
 		return ErrTimeout
 	case http.StatusInsufficientStorage:
 		return ErrNotEnoughSpace

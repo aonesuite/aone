@@ -50,7 +50,7 @@ func WithOnPoll(fn func(attempt int)) PollOption {
 // WithOnBuildLogs registers a callback invoked with newly observed build log
 // entries on each poll tick of WaitForBuild. Only entries not seen on
 // previous ticks are passed in, so the callback forms a stream. When nil or
-// unset, WaitForBuild does not fetch logs. Mirrors E2B's onBuildLogs.
+// unset, WaitForBuild does not fetch logs.
 func WithOnBuildLogs(fn func([]BuildLogEntry)) PollOption {
 	return func(o *pollOpts) { o.onBuildLogs = fn }
 }

@@ -139,7 +139,7 @@ func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*Templat
 // TemplateAliasExists reports whether a template alias exists.
 // It returns true when the caller is the owner (200) or the alias is owned by
 // someone else (403); false when the alias is not found (404). Any other
-// status is returned as an error. Mirrors E2B's Template.exists.
+// status is returned as an error.
 func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, error) {
 	resp, err := c.api.GetTemplatesAliasesAliasWithResponse(ctx, alias)
 	if err != nil {
@@ -181,8 +181,7 @@ func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) 
 	return nil
 }
 
-// GetTemplateTags returns all tags currently attached to templateID. Mirrors
-// E2B's template.getTags().
+// GetTemplateTags returns all tags currently attached to templateID.
 func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
 	resp, err := c.api.GetTemplatesTemplateIDTagsWithResponse(ctx, templateID)
 	if err != nil {
@@ -202,19 +201,19 @@ func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]Temp
 	return tags, nil
 }
 
-// AssignTags is a shorter alias for AssignTemplateTags to align with E2B
-// naming. Prefer AssignTemplateTags when writing new code.
+// AssignTags is a shorter alias for AssignTemplateTags. Prefer
+// AssignTemplateTags when writing new code.
 func (c *Client) AssignTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
 	return c.AssignTemplateTags(ctx, body)
 }
 
-// RemoveTags is a shorter alias for DeleteTemplateTags to align with E2B
-// naming. Prefer DeleteTemplateTags when writing new code.
+// RemoveTags is a shorter alias for DeleteTemplateTags. Prefer
+// DeleteTemplateTags when writing new code.
 func (c *Client) RemoveTags(ctx context.Context, body DeleteTagsParams) error {
 	return c.DeleteTemplateTags(ctx, body)
 }
 
-// GetTags is a shorter alias for GetTemplateTags to align with E2B naming.
+// GetTags is a shorter alias for GetTemplateTags.
 func (c *Client) GetTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
 	return c.GetTemplateTags(ctx, templateID)
 }

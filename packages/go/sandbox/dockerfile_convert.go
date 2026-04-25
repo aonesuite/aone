@@ -127,7 +127,7 @@ func ConvertDockerfile(content string) (*DockerfileConvertResult, error) {
 // FromDockerfile parses Dockerfile content and returns a TemplateBuilder
 // prepopulated with the base image, steps, and start command. Any remaining
 // customization (readyCmd, setEnvs, etc.) can be chained on the returned
-// builder. Mirrors E2B's Template.fromDockerfile().
+// builder.
 func FromDockerfile(content string) (*TemplateBuilder, error) {
 	result, err := ConvertDockerfile(content)
 	if err != nil {
