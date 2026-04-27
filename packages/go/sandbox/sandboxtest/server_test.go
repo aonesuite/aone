@@ -98,3 +98,60 @@ func TestMatchPath(t *testing.T) {
 		}
 	}
 }
+
+// TestSawAndRequestsFor verifies the convenience helpers added to dedupe the
+// sawRequest function previously redefined in every CLI test package.
+func TestSawAndRequestsFor(t *testing.T) {
+	srv := NewServer(t)
+	c, err := sandbox.NewClient(&sandbox.Config{
+		APIKey:     "k",
+		Endpoint:   srv.URL(),
+		HTTPClient: http.DefaultClient,
+	})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	sb, err := c.Create(context.Background(), sandbox.CreateParams{TemplateID: "tpl"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	_ = sb.Kill(context.Background())
+
+	if !srv.Saw("POST", "/sandboxes") {
+		t.Fatalf("Saw missed POST /sandboxes")
+	}
+	if !srv.Saw("delete", "/sandboxes/sbx-test") { // case-insensitive method
+		t.Fatalf("Saw missed DELETE /sandboxes/sbx-test (case-insensitive)")
+	}
+	if srv.Saw("GET", "/does-not-exist") {
+		t.Fatalf("Saw matched a path that wasn't requested")
+	}
+	if got := srv.RequestsFor("POST", "/sandboxes"); len(got) != 1 {
+		t.Fatalf("RequestsFor POST /sandboxes len = %d, want 1", len(got))
+	}
+}
+
+// TestWithUploadTarget covers the upload-target helper used by Dockerfile
+// build tests. A PUT to the returned URL should bump the hits counter.
+func TestWithUploadTarget(t *testing.T) {
+	srv := NewServer(t)
+	url, hits := srv.WithUploadTarget("/upload-target", http.StatusOK)
+	if url == "" {
+		t.Fatal("WithUploadTarget returned empty URL")
+	}
+	req, err := http.NewRequest(http.MethodPut, url, http.NoBody)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PUT: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if *hits != 1 {
+		t.Fatalf("hits = %d, want 1", *hits)
+	}
+}

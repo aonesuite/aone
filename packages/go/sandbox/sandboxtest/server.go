@@ -82,6 +82,48 @@ func (s *Server) Requests() []RecordedRequest {
 	return out
 }
 
+// Saw reports whether any recorded request matches method+path exactly. This
+// is a convenience for the most common assertion in CLI tests; it dedupes the
+// sawRequest helper that previously had to be redefined per package.
+func (s *Server) Saw(method, path string) bool {
+	method = strings.ToUpper(method)
+	for _, req := range s.Requests() {
+		if req.Method == method && req.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+// RequestsFor returns recorded requests matching the given method + exact
+// path. Useful when a test needs to inspect the body or query of a specific
+// call.
+func (s *Server) RequestsFor(method, path string) []RecordedRequest {
+	method = strings.ToUpper(method)
+	var out []RecordedRequest
+	for _, req := range s.Requests() {
+		if req.Method == method && req.Path == path {
+			out = append(out, req)
+		}
+	}
+	return out
+}
+
+// WithUploadTarget registers an HTTP target on the mock at the given path
+// (commonly "/upload-target") and returns its absolute URL. Tests use this to
+// simulate the cache-miss + upload flow for COPY directives: the file-info
+// route can return present=false plus the URL produced here, and the mock
+// then accepts the resulting PUT. The handler counts hits via the returned
+// counter pointer.
+func (s *Server) WithUploadTarget(path string, status int) (url string, hits *int) {
+	hits = new(int)
+	s.Handle("PUT", path, func(w http.ResponseWriter, r *http.Request) {
+		*hits++
+		w.WriteHeader(status)
+	})
+	return s.URL() + path, hits
+}
+
 // dispatch is the root handler. It records the request, then matches against
 // registered routes and invokes the first match. A 404 with a JSON body is
 // returned when nothing matches so the SDK surfaces a usable error.
