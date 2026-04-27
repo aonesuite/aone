@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -49,8 +50,9 @@ func Exec(info ExecInfo) {
 		return
 	}
 
-	// Build command string
-	cmd := strings.Join(info.Command, " ")
+	// Build command string using shell-safe quoting so argv with spaces or
+	// quotes round-trips the same way as e2b's CLI behavior.
+	cmd := buildExecCommand(info.Command)
 
 	// Build command options
 	var opts []sandbox.CommandOption
@@ -186,4 +188,33 @@ func parseEnvPairs(pairs []string) map[string]string {
 		}
 	}
 	return envs
+}
+
+var execShellSafeRE = regexp.MustCompile(`^[A-Za-z0-9_@%+=:,./-]+$`)
+
+// buildExecCommand joins argv into a shell command string, quoting only the
+// arguments that require it so remote execution preserves user intent.
+func buildExecCommand(parts []string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	if len(parts) == 1 {
+		return shellQuote(parts[0])
+	}
+
+	quoted := make([]string, 0, len(parts))
+	for _, part := range parts {
+		quoted = append(quoted, shellQuote(part))
+	}
+	return strings.Join(quoted, " ")
+}
+
+func shellQuote(arg string) string {
+	if arg == "" {
+		return "''"
+	}
+	if execShellSafeRE.MatchString(arg) {
+		return arg
+	}
+	return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
 }

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/aonesuite/aone/internal/config"
 	"github.com/charmbracelet/huh"
 	"golang.org/x/term"
 
@@ -21,6 +22,10 @@ type MigrateInfo struct {
 	// Dockerfile is the path to the Dockerfile. When empty the default
 	// candidates (aone.Dockerfile, Dockerfile) are tried in Path.
 	Dockerfile string
+
+	// ConfigPath, when non-empty, points at an explicit aone.sandbox.toml.
+	// Otherwise the file is looked up under Path (or CWD).
+	ConfigPath string
 
 	// Path is the project root. Defaults to the current working directory.
 	Path string
@@ -44,6 +49,23 @@ func Migrate(info MigrateInfo) {
 			return
 		}
 		root = cwd
+	}
+
+	projectCfg, projectLoc, err := config.LoadProject(info.ConfigPath, root)
+	if err != nil {
+		sbClient.PrintError("%v", err)
+		return
+	}
+	if projectCfg != nil {
+		if info.Dockerfile == "" {
+			info.Dockerfile = projectCfg.Dockerfile
+		}
+		if info.Name == "" {
+			info.Name = projectCfg.TemplateName
+		}
+		if projectLoc != nil && projectLoc.Legacy {
+			sbClient.PrintWarn("Loaded legacy config %s; consider renaming to %s", projectLoc.Path, config.ProjectFileName)
+		}
 	}
 
 	content, dockerfilePath, err := readDockerfile(root, info.Dockerfile)
@@ -86,24 +108,50 @@ func Migrate(info MigrateInfo) {
 // readDockerfile returns the Dockerfile content and resolved path. When the
 // explicit path is empty, the default candidates are tried in root.
 func readDockerfile(root, explicit string) (string, string, error) {
-	if explicit != "" {
-		b, err := os.ReadFile(explicit)
+	resolved, err := resolveDockerfilePath(root, explicit)
+	if err != nil {
+		return "", "", err
+	}
+	b, err := os.ReadFile(resolved)
+	if err != nil {
+		return "", "", fmt.Errorf("read Dockerfile %s: %w", resolved, err)
+	}
+	return string(b), resolved, nil
+}
+
+func resolveDockerfilePath(root, explicit string) (string, error) {
+	if root == "" {
+		cwd, err := os.Getwd()
 		if err != nil {
-			return "", "", fmt.Errorf("read Dockerfile %s: %w", explicit, err)
+			return "", fmt.Errorf("resolve working directory: %w", err)
 		}
-		return string(b), explicit, nil
+		root = cwd
 	}
+
+	if explicit != "" {
+		resolved := explicit
+		if !filepath.IsAbs(explicit) {
+			resolved = filepath.Join(root, explicit)
+		}
+		if _, err := os.Stat(resolved); err != nil {
+			if os.IsNotExist(err) {
+				return "", fmt.Errorf("read Dockerfile %s: %w", resolved, err)
+			}
+			return "", fmt.Errorf("read Dockerfile %s: %w", resolved, err)
+		}
+		return resolved, nil
+	}
+
 	for _, candidate := range []string{"aone.Dockerfile", "Dockerfile"} {
-		p := filepath.Join(root, candidate)
-		b, err := os.ReadFile(p)
-		if err == nil {
-			return string(b), p, nil
-		}
-		if !os.IsNotExist(err) {
-			return "", "", fmt.Errorf("read Dockerfile %s: %w", p, err)
+		resolved := filepath.Join(root, candidate)
+		if _, err := os.Stat(resolved); err == nil {
+			return resolved, nil
+		} else if !os.IsNotExist(err) {
+			return "", fmt.Errorf("read Dockerfile %s: %w", resolved, err)
 		}
 	}
-	return "", "", fmt.Errorf("no Dockerfile found. Specify one with -d/--dockerfile")
+
+	return "", fmt.Errorf("no Dockerfile found. Specify one with -d/--dockerfile")
 }
 
 // resolveLanguage validates the requested language or prompts interactively.

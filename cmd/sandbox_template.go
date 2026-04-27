@@ -150,7 +150,7 @@ func newTemplateInitCmd() *cobra.Command {
 			template.Init(info)
 		},
 	}
-	cmd.Flags().StringVar(&info.Name, "name", "", "template project name")
+	cmd.Flags().StringVarP(&info.Name, "name", "n", "", "template project name")
 	cmd.Flags().StringVarP(&info.Language, "language", "l", "", "programming language (go, typescript, python)")
 	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "output directory")
 	return cmd
@@ -197,6 +197,7 @@ func newTemplateMigrateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&info.Dockerfile, "dockerfile", "d", "", "path to Dockerfile (defaults to aone.Dockerfile or Dockerfile)")
 	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root (defaults to current directory)")
+	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
 	cmd.Flags().StringVarP(&info.Language, "language", "l", "", "target language: go, typescript, python")
 	cmd.Flags().StringVar(&info.Name, "name", "", "template name used in generated code (defaults to directory name)")
 	return cmd

@@ -41,6 +41,9 @@ func Create(info CreateInfo) {
 		}
 	}
 	if info.TemplateID == "" {
+		info.TemplateID = "base"
+	}
+	if info.TemplateID == "" {
 		sbClient.PrintError("template ID is required (pass as argument or set template_id in aone.sandbox.toml)")
 		return
 	}

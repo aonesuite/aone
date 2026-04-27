@@ -1,1 +1,7 @@
-print(f"Hello from {{.Name}}!")
+from aonesuite.sandbox import {{if .Async}}AsyncTemplate{{else}}Template{{end}}
+
+template = (
+    {{if .Async}}AsyncTemplate{{else}}Template{{end}}()
+    .from_image("python:3.12-alpine")
+    .run_cmd("echo 'Hello from {{.Name}}'")
+)

@@ -3,7 +3,9 @@ package template
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"golang.org/x/term"
@@ -14,21 +16,22 @@ import (
 // validNamePattern validates template names: lowercase alphanumeric, starting with a-z or 0-9.
 var validNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
-// supportedLanguages are the languages supported by the init scaffolding.
-var supportedLanguages = []string{"go", "typescript", "python"}
+// supportedLanguages are the accepted language names for init. Python sync
+// and async currently share the same scaffold template in aone.
+var supportedLanguages = []string{"go", "typescript", "python", "python-sync", "python-async"}
 
 // InitInfo holds parameters for initializing a template project.
 type InitInfo struct {
 	Name     string // Template project name
 	Language string // Programming language
-	Path     string // Output directory (defaults to ./<name>)
+	Path     string // Parent/root directory for the generated project
 }
 
 // Init initializes a new template project with scaffolded files.
 // When parameters are not provided, uses interactive prompts.
 func Init(info InitInfo) {
 	name := info.Name
-	language := info.Language
+	language := strings.ToLower(info.Language)
 	path := info.Path
 
 	// Interactive prompts if args are missing
@@ -57,8 +60,9 @@ func Init(info InitInfo) {
 		}
 
 		if language == "" {
-			langOptions := make([]huh.Option[string], 0, len(supportedLanguages))
-			for _, lang := range supportedLanguages {
+			promptLanguages := []string{"go", "typescript", "python-sync", "python-async"}
+			langOptions := make([]huh.Option[string], 0, len(promptLanguages))
+			for _, lang := range promptLanguages {
 				langOptions = append(langOptions, huh.NewOption(lang, lang))
 			}
 			fields = append(fields,
@@ -85,26 +89,32 @@ func Init(info InitInfo) {
 	}
 
 	// Validate language
-	validLang := false
-	for _, l := range supportedLanguages {
-		if language == l {
-			validLang = true
-			break
-		}
-	}
-	if !validLang {
-		sbClient.PrintError("unsupported language %q (supported: go, typescript, python)", language)
+	scaffoldLanguage, ok := normalizeInitLanguage(language)
+	if !ok {
+		sbClient.PrintError("unsupported language %q (supported: %s)", language, strings.Join(supportedLanguages, ", "))
 		return
 	}
 
 	if path == "" {
-		path = "./" + name
+		path = "."
 	}
+	targetDir := filepath.Join(path, name)
 
-	fmt.Printf("Initializing %s template %q in %s...\n", language, name, path)
-	if err := scaffold(name, language, path); err != nil {
+	fmt.Printf("Initializing %s template %q in %s...\n", language, name, targetDir)
+	if err := scaffold(name, scaffoldLanguage, targetDir); err != nil {
 		sbClient.PrintError("scaffold failed: %v", err)
 		return
 	}
 	sbClient.PrintSuccess("Template %s initialized successfully!", name)
+}
+
+func normalizeInitLanguage(language string) (string, bool) {
+	switch language {
+	case "go", "typescript", "python-sync", "python-async":
+		return language, true
+	case "python":
+		return "python-sync", true
+	default:
+		return "", false
+	}
 }

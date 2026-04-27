@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -256,8 +257,7 @@ func TestPublish_ServerErrorContinues(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// create (validation only — full Build path needs a Dockerfile + multipart
-// upload mock and is out of scope for this round)
+// create
 // ---------------------------------------------------------------------------
 
 func TestCreate_RequiresName(t *testing.T) {
@@ -270,12 +270,20 @@ func TestCreate_RequiresName(t *testing.T) {
 	}
 }
 
-func TestCreate_RequiresDockerfile(t *testing.T) {
-	withMock(t)
-	stderr := captureStderr(t, func() {
-		Create(BuildInfo{Name: "demo"})
+func TestCreate_AutoDetectsDockerfile(t *testing.T) {
+	srv := withMock(t)
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM alpine:3.20\nRUN echo hi\n"), 0o644); err != nil {
+		t.Fatalf("write dockerfile: %v", err)
+	}
+
+	_ = captureStdout(t, func() {
+		Create(BuildInfo{Name: "demo", Path: dir})
 	})
-	if !strings.Contains(stderr, "Dockerfile path is required") {
-		t.Fatalf("stderr = %q", stderr)
+	if !sawRequest(srv, "POST", "/v3/templates") {
+		t.Fatalf("expected POST /v3/templates; got %+v", srv.Requests())
+	}
+	if !sawRequest(srv, "POST", "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111") {
+		t.Fatalf("expected start build call; got %+v", srv.Requests())
 	}
 }

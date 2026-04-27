@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aonesuite/aone/internal/config"
 	"github.com/aonesuite/aone/packages/go/sandbox"
 )
 
@@ -79,6 +80,55 @@ func TestReadDockerfile_NoneFoundReturnsError(t *testing.T) {
 func TestReadDockerfile_ExplicitMissingReturnsError(t *testing.T) {
 	if _, _, err := readDockerfile(t.TempDir(), "/no/such/file"); err == nil {
 		t.Fatalf("expected error for missing explicit path")
+	}
+}
+
+func TestReadDockerfile_ExplicitRelativeToRoot(t *testing.T) {
+	dir := t.TempDir()
+	nested := filepath.Join(dir, "docker")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	p := filepath.Join(nested, "Customfile")
+	if err := os.WriteFile(p, []byte("FROM scratch\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	_, got, err := readDockerfile(dir, filepath.Join("docker", "Customfile"))
+	if err != nil {
+		t.Fatalf("readDockerfile: %v", err)
+	}
+	if got != p {
+		t.Fatalf("path = %q, want %q", got, p)
+	}
+}
+
+func TestMigrate_UsesProjectConfigForDockerfileAndName(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM alpine:3.20\nRUN echo hi\n"), 0o644); err != nil {
+		t.Fatalf("write Dockerfile: %v", err)
+	}
+	if err := config.SaveProject(&config.Project{
+		TemplateName: "cfg-demo",
+		Dockerfile:   "Dockerfile",
+	}, filepath.Join(dir, config.ProjectFileName)); err != nil {
+		t.Fatalf("save project: %v", err)
+	}
+
+	stderr := captureStderr(t, func() {
+		_ = captureStdout(t, func() {
+			Migrate(MigrateInfo{Path: dir, Language: "go"})
+		})
+	})
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+
+	out, err := os.ReadFile(filepath.Join(dir, "template.go"))
+	if err != nil {
+		t.Fatalf("read migrated template: %v", err)
+	}
+	if !strings.Contains(string(out), `func TemplateCfgDemo() *sandbox.TemplateBuilder`) {
+		t.Fatalf("expected config-derived name in migrated template; got:\n%s", out)
 	}
 }
 

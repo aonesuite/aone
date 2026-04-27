@@ -1,0 +1,16 @@
+from .template import template
+from aonesuite.sandbox import {{if .Async}}AsyncTemplate{{else}}Template{{end}}
+
+{{if .Async}}import asyncio
+
+
+async def main():
+    await AsyncTemplate.build(template, "{{.Name}}-dev")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+{{else}}
+if __name__ == "__main__":
+    Template.build(template, "{{.Name}}-dev")
+{{end}}

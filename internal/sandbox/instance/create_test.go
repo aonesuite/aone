@@ -47,7 +47,7 @@ func isolateConfig(t *testing.T) string {
 	return dir
 }
 
-func TestCreate_NoTemplateAndNoProjectConfigErrors(t *testing.T) {
+func TestCreate_NoTemplateAndNoProjectConfigFallsBackToBase(t *testing.T) {
 	isolateConfig(t)
 	projectDir := t.TempDir() // empty: no aone.sandbox.toml
 
@@ -55,8 +55,11 @@ func TestCreate_NoTemplateAndNoProjectConfigErrors(t *testing.T) {
 		Create(CreateInfo{Path: projectDir})
 	})
 
-	if !strings.Contains(out, "template ID is required") {
-		t.Fatalf("stderr = %q, want 'template ID is required'", out)
+	if strings.Contains(out, "template ID is required") {
+		t.Fatalf("stderr = %q, should fall back to base template instead of failing missing-template validation", out)
+	}
+	if !strings.Contains(out, "API key not configured") {
+		t.Fatalf("expected API-key error after base fallback; stderr = %q", out)
 	}
 }
 

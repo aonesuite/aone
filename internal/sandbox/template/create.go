@@ -15,10 +15,6 @@ func Create(info BuildInfo) {
 		sbClient.PrintError("template name is required")
 		return
 	}
-	if info.Dockerfile == "" {
-		sbClient.PrintError("Dockerfile path is required (use -d/--dockerfile)")
-		return
-	}
 	// `template create` defaults to waiting for the build to complete so
 	// users get a single command that produces a ready-to-use template.
 	info.Wait = true

@@ -81,6 +81,19 @@ func Build(info BuildInfo) {
 			sbClient.PrintWarn("Loaded legacy config %s; consider renaming to %s", projectLoc.Path, config.ProjectFileName)
 		}
 	}
+	if info.Dockerfile == "" && info.FromImage == "" && info.FromTemplate == "" {
+		if resolved, err := resolveDockerfilePath(info.Path, ""); err == nil {
+			info.Dockerfile = resolved
+		}
+	}
+	if info.Dockerfile != "" {
+		resolved, err := resolveDockerfilePath(info.Path, info.Dockerfile)
+		if err != nil {
+			sbClient.PrintError("%v", err)
+			return
+		}
+		info.Dockerfile = resolved
+	}
 
 	client, err := sbClient.NewSandboxClient()
 	if err != nil {

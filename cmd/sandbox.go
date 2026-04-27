@@ -27,7 +27,7 @@ func newSandboxListCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&info.State, "state", "s", "", "filter by state (comma-separated: running,paused). Defaults to running")
 	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "filter by metadata (key1=value1,key2=value2)")
-	cmd.Flags().Int32VarP(&info.Limit, "limit", "l", 0, "maximum number of sandboxes to return")
+	cmd.Flags().Int32VarP(&info.Limit, "limit", "l", 0, "maximum number of sandboxes to return; 0 uses the server default")
 	cmd.Flags().StringVarP(&info.Format, "format", "f", "pretty", "output format: pretty or json")
 	return cmd
 }
