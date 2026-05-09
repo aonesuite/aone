@@ -10,11 +10,11 @@ import (
 type PollOption func(*pollOpts)
 
 type pollOpts struct {
-	interval     time.Duration
-	maxInterval  time.Duration
-	backoff      float64
-	onPoll       func(attempt int)
-	onBuildLogs  func([]BuildLogEntry)
+	interval    time.Duration
+	maxInterval time.Duration
+	backoff     float64
+	onPoll      func(attempt int)
+	onBuildLogs func([]BuildLogEntry)
 }
 
 func defaultPollOpts(defaultInterval time.Duration) *pollOpts {

@@ -24,9 +24,8 @@ func TestBuild_RequiresFromSourceOrDockerfile(t *testing.T) {
 	}
 }
 
-// TestBuild_FromImage_NoWait verifies the basic create→start path when the
-// caller does not wait for the build to complete. We assert that the SDK
-// hit /v3/templates and /v2/templates/{id}/builds/{id} on the mock.
+// TestBuild_FromImage_NoWait verifies the basic create path when the caller
+// does not wait for the build to complete.
 func TestBuild_FromImage_NoWait(t *testing.T) {
 	srv := withMock(t)
 	_ = captureStdout(t, func() {
@@ -37,13 +36,8 @@ func TestBuild_FromImage_NoWait(t *testing.T) {
 			// SaveConfig=false to avoid the test depending on the file system.
 		})
 	})
-	if !sawRequest(srv, "POST", "/v3/templates") {
-		t.Fatalf("expected POST /v3/templates; got %+v", srv.Requests())
-	}
-	// build ID from the default mock create response.
-	wantPath := "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111"
-	if !sawRequest(srv, "POST", wantPath) {
-		t.Fatalf("expected POST %s; got %+v", wantPath, srv.Requests())
+	if !sawRequest(srv, "POST", "/api/v1/sbx/templates") {
+		t.Fatalf("expected POST /api/v1/sbx/templates; got %+v", srv.Requests())
 	}
 }
 
@@ -61,7 +55,7 @@ func TestBuild_FromImage_WaitSucceeds(t *testing.T) {
 		})
 	})
 	// Status route should be hit, and the success message printed via fmt.
-	if !sawRequest(srv, "GET", "/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111/status") {
+	if !sawRequest(srv, "GET", "/api/v1/sbx/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111/status") {
 		t.Fatalf("expected status poll; got %+v", srv.Requests())
 	}
 	if !strings.Contains(out, "Template ID:  tpl-test") {
@@ -78,7 +72,7 @@ func TestBuild_FromImage_WaitSucceeds(t *testing.T) {
 // loop by overriding /status to return "error".
 func TestBuild_FromImage_WaitBuildError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates/{tid}/builds/{bid}/status", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"templateID":"tpl-new",
@@ -107,7 +101,18 @@ func TestBuild_FromImage_WaitBuildError(t *testing.T) {
 // branch: when the caller passes --template-id but the template has no prior
 // builds, Build cannot pick a build ID to restart and must error out.
 func TestBuild_ExistingTemplate_NoBuildsErrors(t *testing.T) {
-	withMock(t)
+	srv := withMock(t)
+	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"template_id":"tpl-existing",
+			"cpu_count":2,"memory_mb":1024,"disk_size_mb":8192,
+			"envd_version":"0.0.1","public":false,"spawn_count":0,
+			"aliases":[],"names":["t"],
+			"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z",
+			"builds":[]
+		}`))
+	})
 	stderr := captureStderr(t, func() {
 		_ = captureStdout(t, func() {
 			Build(BuildInfo{
@@ -127,21 +132,17 @@ func TestBuild_ExistingTemplate_NoBuildsErrors(t *testing.T) {
 // build against it.
 func TestBuild_ExistingTemplate_HappyPath(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
-			"templateID":"tpl-existing",
-			"buildID":"build-1","buildStatus":"ready","buildCount":1,
-			"cpuCount":2,"memoryMB":1024,"diskSizeMB":8192,
-			"envdVersion":"0.0.1","public":false,"spawnCount":0,
-			"aliases":[],"names":["t"],
-			"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z",
-			"builds":[{
-				"buildID":"22222222-2222-2222-2222-222222222222",
-				"cpuCount":2,"memoryMB":1024,"status":"ready",
-				"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z"
-			}]
-		}`))
+				"template_id":"tpl-existing",
+				"build_id":"22222222-2222-2222-2222-222222222222",
+				"build_status":"ready",
+				"cpu_count":2,"memory_mb":1024,"disk_size_mb":8192,
+				"envd_version":"0.0.1","public":false,
+				"aliases":[],"names":["t"],
+				"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"
+			}`))
 	})
 
 	_ = captureStdout(t, func() {
@@ -151,7 +152,7 @@ func TestBuild_ExistingTemplate_HappyPath(t *testing.T) {
 			Path:       t.TempDir(),
 		})
 	})
-	wantPath := "/v2/templates/tpl-existing/builds/22222222-2222-2222-2222-222222222222"
+	wantPath := "/api/v1/sbx/templates/tpl-existing/builds/22222222-2222-2222-2222-222222222222"
 	if !sawRequest(srv, "POST", wantPath) {
 		t.Fatalf("expected POST %s; got %+v", wantPath, srv.Requests())
 	}
@@ -162,15 +163,27 @@ func TestBuild_ExistingTemplate_HappyPath(t *testing.T) {
 // PrintError("start build failed: ...").
 func TestBuild_StartFailsSurfacesError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/v2/templates/{tid}/builds/{bid}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"template_id":"tpl-existing",
+			"build_id":"33333333-3333-3333-3333-333333333333",
+			"build_status":"ready",
+			"cpu_count":2,"memory_mb":1024,"disk_size_mb":8192,
+			"envd_version":"0.0.1","public":false,
+			"aliases":[],"names":["t"],
+			"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"
+		}`))
+	})
+	srv.Handle("POST", "/api/v1/sbx/templates/{tid}/builds/{bid}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
 		_ = captureStdout(t, func() {
 			Build(BuildInfo{
-				Name:      "demo",
-				FromImage: "alpine:3.20",
-				Path:      t.TempDir(),
+				TemplateID: "tpl-existing",
+				FromImage:  "alpine:3.20",
+				Path:       t.TempDir(),
 			})
 		})
 	})
@@ -182,7 +195,7 @@ func TestBuild_StartFailsSurfacesError(t *testing.T) {
 // TestBuild_FromDockerfile_NoCopySteps exercises the v2 Dockerfile build path
 // with a Dockerfile that has no COPY directives — there are no file uploads
 // to mock, but the Dockerfile parser still produces steps and a base image,
-// so the SDK calls /v2/templates/{tid}/builds/{bid}. This proves the parsing
+// so the SDK calls /api/v1/sbx/templates/{tid}/builds/{bid}. This proves the parsing
 // branch of Build is wired correctly without dragging in multipart uploads.
 func TestBuild_FromDockerfile_NoCopySteps(t *testing.T) {
 	srv := withMock(t)
@@ -195,12 +208,12 @@ func TestBuild_FromDockerfile_NoCopySteps(t *testing.T) {
 
 	_ = captureStdout(t, func() {
 		Build(BuildInfo{
-			Name:       "demo",
+			TemplateID: "tpl-new",
 			Dockerfile: df,
 			Path:       dir,
 		})
 	})
-	wantPath := "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111"
+	wantPath := "/api/v1/sbx/templates/tpl-new/builds/build-1"
 	if !sawRequest(srv, "POST", wantPath) {
 		t.Fatalf("expected POST %s; got %+v", wantPath, srv.Requests())
 	}
@@ -217,27 +230,27 @@ func TestBuild_AutoDetectsAonePrefixedDockerfile(t *testing.T) {
 		t.Fatalf("write dockerfile: %v", err)
 	}
 
-	out := captureStdout(t, func() {
+	_ = captureStdout(t, func() {
 		Build(BuildInfo{
 			Name: "demo",
 			Path: dir,
 		})
 	})
-	if !strings.Contains(out, "Parsed Dockerfile: base image=alpine:3.20") {
-		t.Fatalf("expected aone.Dockerfile to be used; stdout = %q", out)
+	reqs := srv.RequestsFor("POST", "/api/v1/sbx/templates")
+	if len(reqs) != 1 {
+		t.Fatalf("expected one template create request; got %+v", srv.Requests())
 	}
-	wantPath := "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111"
-	if !sawRequest(srv, "POST", wantPath) {
-		t.Fatalf("expected POST %s; got %+v", wantPath, srv.Requests())
+	if !strings.Contains(reqs[0].Body, "FROM alpine:3.20") || strings.Contains(reqs[0].Body, "FROM busybox:1.36") {
+		t.Fatalf("expected aone.Dockerfile content in request body: %q", reqs[0].Body)
 	}
 }
 
-// TestBuild_CreateTemplateFails covers the failure on the POST /v3/templates
+// TestBuild_CreateTemplateFails covers the failure on the POST /api/v1/sbx/templates
 // hop: when the API rejects the create request, Build prints an error and
 // must not advance to the start-build step.
 func TestBuild_CreateTemplateFails(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/v3/templates", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("POST", "/api/v1/sbx/templates", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"code":400,"message":"bad name"}`))
 	})
@@ -254,9 +267,9 @@ func TestBuild_CreateTemplateFails(t *testing.T) {
 	if !strings.Contains(stderr, "create template failed") {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	// And /v2/templates/.../builds/... must NOT have been called.
+	// And /api/v1/sbx/templates/.../builds/... must NOT have been called.
 	for _, req := range srv.Requests() {
-		if req.Method == "POST" && strings.HasPrefix(req.Path, "/v2/templates/") {
+		if req.Method == "POST" && strings.HasPrefix(req.Path, "/api/v1/sbx/templates/") {
 			t.Fatalf("unexpected start-build call after create failure: %+v", req)
 		}
 	}

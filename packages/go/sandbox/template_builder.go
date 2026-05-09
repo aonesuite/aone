@@ -401,28 +401,22 @@ func (t *TemplateBuilder) Build(ctx context.Context, c *Client, name string, opt
 
 // BuildInBackground creates and starts a template build without waiting.
 func (t *TemplateBuilder) BuildInBackground(ctx context.Context, c *Client, name string, opts BuildTemplateOptions) (*BuildInfo, error) {
-	create := CreateTemplateParams{
-		Alias:    &name,
-		Name:     &name,
-		Tags:     &opts.Tags,
-		CPUCount: opts.CPUCount,
-		MemoryMB: opts.MemoryMB,
-	}
-	created, err := c.CreateTemplate(ctx, create)
+	dockerfile, err := t.ToDockerfile()
 	if err != nil {
 		return nil, err
 	}
-	force := opts.SkipCache || t.force
-	start := StartTemplateBuildParams{
-		Force:             &force,
-		FromImage:         t.fromImage,
-		FromImageRegistry: t.fromImageRegistry,
-		FromTemplate:      t.fromTemplate,
-		StartCmd:          t.startCmd,
-		ReadyCmd:          t.readyCmd,
-		Steps:             &t.steps,
+	create := CreateTemplateParams{
+		Alias:      &name,
+		Name:       &name,
+		Tags:       &opts.Tags,
+		CPUCount:   opts.CPUCount,
+		MemoryMB:   opts.MemoryMB,
+		Dockerfile: &dockerfile,
+		StartCmd:   t.startCmd,
+		ReadyCmd:   t.readyCmd,
 	}
-	if err := c.StartTemplateBuild(ctx, created.TemplateID, created.BuildID, start); err != nil {
+	created, err := c.CreateTemplate(ctx, create)
+	if err != nil {
 		return nil, err
 	}
 	return &BuildInfo{

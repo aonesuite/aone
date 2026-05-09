@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -79,71 +78,13 @@ func newTestSandbox(t *testing.T, srv *httptest.Server) *Sandbox {
 // ---------------------------------------------------------------------------
 
 func TestTemplateAliasExists(t *testing.T) {
-	cases := []struct {
-		name       string
-		statusCode int
-		body       string
-		want       bool
-		wantErr    bool
-	}{
-		{
-			name:       "owner returns true",
-			statusCode: http.StatusOK,
-			body:       `{"templateID":"tpl_123","public":false}`,
-			want:       true,
-		},
-		{
-			name:       "forbidden treated as exists",
-			statusCode: http.StatusForbidden,
-			body:       `{"code":403,"message":"forbidden"}`,
-			want:       true,
-		},
-		{
-			name:       "not found returns false",
-			statusCode: http.StatusNotFound,
-			body:       `{"code":404,"message":"missing"}`,
-			want:       false,
-		},
-		{
-			name:       "server error surfaces error",
-			statusCode: http.StatusInternalServerError,
-			body:       `{"code":500,"message":"boom"}`,
-			wantErr:    true,
-		},
+	c, _ := newTestClient(t, http.NotFoundHandler())
+	exists, err := c.TemplateAliasExists(context.Background(), "my-alias")
+	if err != nil {
+		t.Fatalf("TemplateAliasExists: %v", err)
 	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet {
-					t.Errorf("method = %s, want GET", r.Method)
-				}
-				if want := "/templates/aliases/my-alias"; r.URL.Path != want {
-					t.Errorf("path = %s, want %s", r.URL.Path, want)
-				}
-				if got := r.Header.Get("X-API-Key"); got != "test-key" {
-					t.Errorf("X-API-Key = %q, want test-key", got)
-				}
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(tc.statusCode)
-				_, _ = io.WriteString(w, tc.body)
-			})
-			c, _ := newTestClient(t, handler)
-
-			got, err := c.TemplateAliasExists(context.Background(), "my-alias")
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got != tc.want {
-				t.Errorf("exists = %v, want %v", got, tc.want)
-			}
-		})
+	if exists {
+		t.Fatal("expected missing alias")
 	}
 }
 
@@ -152,69 +93,10 @@ func TestTemplateAliasExists(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGetTemplateTags(t *testing.T) {
-	t.Run("returns tags", func(t *testing.T) {
-		buildID := "11111111-1111-1111-1111-111111111111"
-		created := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
-		body := `[
-			{"buildID":"` + buildID + `","tag":"latest","createdAt":"` + created.Format(time.RFC3339Nano) + `"},
-			{"buildID":"` + buildID + `","tag":"prod","createdAt":"` + created.Format(time.RFC3339Nano) + `"}
-		]`
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodGet {
-				t.Errorf("method = %s, want GET", r.Method)
-			}
-			if want := "/templates/tpl_42/tags"; r.URL.Path != want {
-				t.Errorf("path = %s, want %s", r.URL.Path, want)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, body)
-		})
-		c, _ := newTestClient(t, handler)
-
-		tags, err := c.GetTemplateTags(context.Background(), "tpl_42")
-		if err != nil {
-			t.Fatalf("GetTemplateTags: %v", err)
-		}
-		if len(tags) != 2 {
-			t.Fatalf("len(tags) = %d, want 2", len(tags))
-		}
-		if tags[0].Tag != "latest" || tags[1].Tag != "prod" {
-			t.Errorf("unexpected tag names: %+v", tags)
-		}
-		if tags[0].BuildID != buildID {
-			t.Errorf("BuildID = %q, want %q", tags[0].BuildID, buildID)
-		}
-		if !tags[0].CreatedAt.Equal(created) {
-			t.Errorf("CreatedAt = %v, want %v", tags[0].CreatedAt, created)
-		}
-	})
-
-	t.Run("empty list", func(t *testing.T) {
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[]`)
-		})
-		c, _ := newTestClient(t, handler)
-		tags, err := c.GetTemplateTags(context.Background(), "tpl_empty")
-		if err != nil {
-			t.Fatalf("GetTemplateTags: %v", err)
-		}
-		if len(tags) != 0 {
-			t.Errorf("len(tags) = %d, want 0", len(tags))
-		}
-	})
-
-	t.Run("non-200 surfaces error", func(t *testing.T) {
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			_, _ = io.WriteString(w, `{"code":502,"message":"bad gateway"}`)
-		})
-		c, _ := newTestClient(t, handler)
-		if _, err := c.GetTemplateTags(context.Background(), "tpl_x"); err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
+	c, _ := newTestClient(t, http.NotFoundHandler())
+	if _, err := c.GetTemplateTags(context.Background(), "tpl_42"); err == nil {
+		t.Fatal("expected unsupported error, got nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

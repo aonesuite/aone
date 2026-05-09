@@ -53,6 +53,7 @@ message StartRequest {
     ProcessConfig process = 1;
     optional PTY pty = 2;
     optional string tag = 3;
+    // stdin defaults to true when omitted.
     optional bool stdin = 4;
 }
 

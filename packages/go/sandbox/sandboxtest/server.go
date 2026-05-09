@@ -193,109 +193,109 @@ func (s *Server) installDefaults() {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 
 	// --- sandboxes ---------------------------------------------------------
-	s.routes[routeKey("POST", "/sandboxes")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusCreated, map[string]any{
-			"sandboxID":          "sbx-test",
-			"templateID":         "tpl-test",
-			"clientID":           "client-test",
-			"envdVersion":        "0.0.1",
-			"domain":             "example.test",
-			"trafficAccessToken": "traf-tok",
-			"envdAccessToken":    "envd-tok",
+			"sandbox_id":           "sbx-test",
+			"template_id":          "tpl-test",
+			"client_id":            "client-test",
+			"envd_version":         "0.0.1",
+			"domain":               "example.test",
+			"traffic_access_token": "traf-tok",
+			"envd_access_token":    "envd-tok",
 		})
 	}
 
-	s.routes[routeKey("POST", "/sandboxes/{id}/connect")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/connect")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"sandboxID":          pathID(r.URL.Path, "/sandboxes/", "/connect"),
-			"templateID":         "tpl-test",
-			"clientID":           "client-test",
-			"envdVersion":        "0.0.1",
-			"domain":             "example.test",
-			"trafficAccessToken": "traf-tok",
-			"envdAccessToken":    "envd-tok",
+			"sandbox_id":           pathID(r.URL.Path, "/api/v1/sbx/sandboxes/", "/connect"),
+			"template_id":          "tpl-test",
+			"client_id":            "client-test",
+			"envd_version":         "0.0.1",
+			"domain":               "example.test",
+			"traffic_access_token": "traf-tok",
+			"envd_access_token":    "envd-tok",
 		})
 	}
 
 	sandboxDetail := func(id string) map[string]any {
 		return map[string]any{
-			"sandboxID":           id,
-			"templateID":          "tpl-test",
-			"clientID":            "client-test",
-			"envdVersion":         "0.0.1",
-			"envdAccessToken":     "envd-tok",
-			"domain":              "example.test",
-			"cpuCount":            int32(2),
-			"memoryMB":            int32(1024),
-			"diskSizeMB":          int32(8192),
-			"startedAt":           now,
-			"endAt":               now,
-			"state":               "running",
-			"allowInternetAccess": true,
+			"sandbox_id":            id,
+			"template_id":           "tpl-test",
+			"client_id":             "client-test",
+			"envd_version":          "0.0.1",
+			"envd_access_token":     "envd-tok",
+			"domain":                "example.test",
+			"cpu_count":             int32(2),
+			"memory_mb":             int32(1024),
+			"disk_size_mb":          int32(8192),
+			"started_at":            now,
+			"end_at":                now,
+			"state":                 "running",
+			"allow_internet_access": true,
 		}
 	}
 
-	s.routes[routeKey("GET", "/sandboxes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
-		id := pathID(r.URL.Path, "/sandboxes/", "")
+	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+		id := pathID(r.URL.Path, "/api/v1/sbx/sandboxes/", "")
 		writeJSON(w, http.StatusOK, sandboxDetail(id))
 	}
 
-	s.routes[routeKey("GET", "/v2/sandboxes")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []map[string]any{{
-			"sandboxID":   "sbx-test",
-			"templateID":  "tpl-test",
-			"clientID":    "client-test",
-			"envdVersion": "0.0.1",
-			"cpuCount":    int32(2),
-			"memoryMB":    int32(1024),
-			"diskSizeMB":  int32(8192),
-			"startedAt":   now,
-			"endAt":       now,
-			"state":       "running",
+			"sandbox_id":   "sbx-test",
+			"template_id":  "tpl-test",
+			"client_id":    "client-test",
+			"envd_version": "0.0.1",
+			"cpu_count":    int32(2),
+			"memory_mb":    int32(1024),
+			"disk_size_mb": int32(8192),
+			"started_at":   now,
+			"end_at":       now,
+			"state":        "running",
 		}})
 	}
 
-	s.routes[routeKey("DELETE", "/sandboxes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("DELETE", "/api/v1/sbx/sandboxes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
-	s.routes[routeKey("POST", "/sandboxes/{id}/pause")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/pause")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
-	s.routes[routeKey("POST", "/sandboxes/{id}/resume")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/resume")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 	}
 
-	s.routes[routeKey("POST", "/sandboxes/{id}/timeout")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/timeout")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
-	s.routes[routeKey("POST", "/sandboxes/{id}/refreshes")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/refreshes")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
-	s.routes[routeKey("GET", "/sandboxes/{id}/metrics")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes/{id}/metrics")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []map[string]any{{
-			"timestamp":     now,
-			"timestampUnix": time.Now().Unix(),
-			"cpuCount":      int32(2),
-			"cpuUsedPct":    float32(12.5),
-			"memTotal":      int64(1024 * 1024 * 1024),
-			"memUsed":       int64(256 * 1024 * 1024),
-			"diskTotal":     int64(8 * 1024 * 1024 * 1024),
-			"diskUsed":      int64(1024 * 1024 * 1024),
+			"timestamp":      now,
+			"timestamp_unix": time.Now().Unix(),
+			"cpu_count":      int32(2),
+			"cpu_used_pct":   float32(12.5),
+			"mem_total":      int64(1024 * 1024 * 1024),
+			"mem_used":       int64(256 * 1024 * 1024),
+			"disk_total":     int64(8 * 1024 * 1024 * 1024),
+			"disk_used":      int64(1024 * 1024 * 1024),
 		}})
 	}
 
-	s.routes[routeKey("GET", "/sandboxes/{id}/logs")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes/{id}/logs")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"logs":       []map[string]any{{"line": "hello", "timestamp": now}},
-			"logEntries": []map[string]any{{"level": "info", "message": "hello", "fields": map[string]string{}, "timestamp": now}},
+			"logs":        []map[string]any{{"line": "hello", "timestamp": now}},
+			"log_entries": []map[string]any{{"level": "info", "message": "hello", "fields": map[string]string{}, "timestamp": now}},
 		})
 	}
 
-	s.routes[routeKey("GET", "/sandboxes/metrics")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes/metrics")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"sandboxes": []any{}})
 	}
 
@@ -369,87 +369,87 @@ func (s *Server) installDefaults() {
 	}
 
 	// --- templates ---------------------------------------------------------
-	s.routes[routeKey("GET", "/templates")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []map[string]any{{
-			"templateID":  "tpl-test",
-			"buildID":     "build-1",
-			"buildStatus": "ready",
-			"buildCount":  int32(1),
-			"cpuCount":    int32(2),
-			"memoryMB":    int32(1024),
-			"diskSizeMB":  int32(8192),
-			"envdVersion": "0.0.1",
-			"public":      false,
-			"spawnCount":  int64(0),
-			"aliases":     []string{},
-			"names":       []string{"test"},
-			"createdAt":   now,
-			"updatedAt":   now,
+			"template_id":  "tpl-test",
+			"build_id":     "build-1",
+			"build_status": "ready",
+			"build_count":  int32(1),
+			"cpu_count":    int32(2),
+			"memory_mb":    int32(1024),
+			"disk_size_mb": int32(8192),
+			"envd_version": "0.0.1",
+			"public":       false,
+			"spawn_count":  int64(0),
+			"aliases":      []string{},
+			"names":        []string{"test"},
+			"created_at":   now,
+			"updated_at":   now,
 		}})
 	}
-	s.routes[routeKey("POST", "/v3/templates")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/templates")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusAccepted, map[string]any{
-			"templateID": "tpl-new",
-			"buildID":    "11111111-1111-1111-1111-111111111111",
-			"aliases":    []string{},
-		})
-	}
-	s.routes[routeKey("GET", "/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"templateID":  pathID(r.URL.Path, "/templates/", ""),
-			"buildID":     "build-1",
-			"buildStatus": "ready",
-			"buildCount":  int32(1),
-			"cpuCount":    int32(2),
-			"memoryMB":    int32(1024),
-			"diskSizeMB":  int32(8192),
-			"envdVersion": "0.0.1",
-			"public":      false,
-			"spawnCount":  int64(0),
+			"template_id": "tpl-new",
+			"build_id":    "11111111-1111-1111-1111-111111111111",
 			"aliases":     []string{},
-			"names":       []string{"test"},
-			"createdAt":   now,
-			"updatedAt":   now,
-			"builds":      []any{},
 		})
 	}
-	s.routes[routeKey("DELETE", "/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"template_id":  pathID(r.URL.Path, "/api/v1/sbx/templates/", ""),
+			"build_id":     "build-1",
+			"build_status": "ready",
+			"build_count":  int32(1),
+			"cpu_count":    int32(2),
+			"memory_mb":    int32(1024),
+			"disk_size_mb": int32(8192),
+			"envd_version": "0.0.1",
+			"public":       false,
+			"spawn_count":  int64(0),
+			"aliases":      []string{},
+			"names":        []string{"test"},
+			"created_at":   now,
+			"updated_at":   now,
+			"builds":       []any{},
+		})
+	}
+	s.routes[routeKey("DELETE", "/api/v1/sbx/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
-	s.routes[routeKey("PATCH", "/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("PATCH", "/api/v1/sbx/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
-	s.routes[routeKey("GET", "/templates/aliases/{alias}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/aliases/{alias}")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"templateID": "tpl-test",
-			"public":     false,
+			"template_id": "tpl-test",
+			"public":      false,
 		})
 	}
-	s.routes[routeKey("GET", "/templates/{id}/tags")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/{id}/tags")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []any{})
 	}
-	s.routes[routeKey("POST", "/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusCreated, map[string]any{"tags": []any{}})
 	}
-	s.routes[routeKey("DELETE", "/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("DELETE", "/api/v1/sbx/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
-	s.routes[routeKey("POST", "/v2/templates/{tid}/builds/{bid}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/templates/{tid}/builds/{bid}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}
-	s.routes[routeKey("GET", "/templates/{tid}/builds/{bid}/status")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/status")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"templateID": "tpl-test",
-			"buildID":    "build-1",
-			"status":     "ready",
-			"logs":       []string{},
-			"logEntries": []any{},
+			"template_id": "tpl-test",
+			"build_id":    "build-1",
+			"status":      "ready",
+			"logs":        []string{},
+			"log_entries": []any{},
 		})
 	}
-	s.routes[routeKey("GET", "/templates/{tid}/builds/{bid}/logs")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/logs")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"logs": []any{}})
 	}
-	s.routes[routeKey("GET", "/templates/{tid}/files/{hash}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/files/{hash}")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"present": true,
 		})

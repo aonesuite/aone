@@ -454,6 +454,7 @@ func (fs *Filesystem) WriteStream(ctx context.Context, path string, r io.Reader,
 
 	return fs.GetInfo(ctx, path, opts...)
 }
+
 type WriteEntry struct {
 	// Path is the destination path inside the sandbox.
 	Path string

@@ -51,7 +51,7 @@ func TestServer_HandleOverridesDefault(t *testing.T) {
 	srv := NewServer(t)
 
 	called := false
-	srv.Handle("DELETE", "/sandboxes/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("DELETE", "/api/v1/sbx/sandboxes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusInternalServerError)
 	})
@@ -84,13 +84,13 @@ func TestMatchPath(t *testing.T) {
 		pattern, path string
 		want          bool
 	}{
-		{"/sandboxes", "/sandboxes", true},
-		{"/sandboxes/{id}", "/sandboxes/abc", true},
-		{"/sandboxes/{id}", "/sandboxes/abc/extra", false},
-		{"/sandboxes/{id}/pause", "/sandboxes/abc/pause", true},
-		{"/sandboxes/{id}/pause", "/sandboxes/abc/resume", false},
-		{"/v2/sandboxes", "/v2/sandboxes", true},
-		{"/v2/sandboxes", "/sandboxes", false},
+		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/sandboxes", true},
+		{"/api/v1/sbx/sandboxes/{id}", "/api/v1/sbx/sandboxes/abc", true},
+		{"/api/v1/sbx/sandboxes/{id}", "/api/v1/sbx/sandboxes/abc/extra", false},
+		{"/api/v1/sbx/sandboxes/{id}/pause", "/api/v1/sbx/sandboxes/abc/pause", true},
+		{"/api/v1/sbx/sandboxes/{id}/pause", "/api/v1/sbx/sandboxes/abc/resume", false},
+		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/sandboxes", true},
+		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/templates", false},
 	}
 	for _, tc := range cases {
 		if got := matchPath(tc.pattern, tc.path); got != tc.want {
@@ -117,16 +117,16 @@ func TestSawAndRequestsFor(t *testing.T) {
 	}
 	_ = sb.Kill(context.Background())
 
-	if !srv.Saw("POST", "/sandboxes") {
+	if !srv.Saw("POST", "/api/v1/sbx/sandboxes") {
 		t.Fatalf("Saw missed POST /sandboxes")
 	}
-	if !srv.Saw("delete", "/sandboxes/sbx-test") { // case-insensitive method
+	if !srv.Saw("delete", "/api/v1/sbx/sandboxes/sbx-test") { // case-insensitive method
 		t.Fatalf("Saw missed DELETE /sandboxes/sbx-test (case-insensitive)")
 	}
 	if srv.Saw("GET", "/does-not-exist") {
 		t.Fatalf("Saw matched a path that wasn't requested")
 	}
-	if got := srv.RequestsFor("POST", "/sandboxes"); len(got) != 1 {
+	if got := srv.RequestsFor("POST", "/api/v1/sbx/sandboxes"); len(got) != 1 {
 		t.Fatalf("RequestsFor POST /sandboxes len = %d, want 1", len(got))
 	}
 }

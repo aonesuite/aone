@@ -3,8 +3,8 @@ package sandbox
 import (
 	"context"
 	"net/http"
-
-	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
+	"net/url"
+	"strconv"
 )
 
 // SnapshotInfo identifies a persistent sandbox snapshot.
@@ -22,14 +22,16 @@ type SnapshotListParams struct {
 
 // CreateSnapshot creates a persistent snapshot from sandboxID.
 func (c *Client) CreateSnapshot(ctx context.Context, sandboxID string) (*SnapshotInfo, error) {
-	resp, err := c.api.PostSandboxesSandboxIDSnapshotsWithResponse(ctx, sandboxID, apis.PostSandboxesSandboxIDSnapshotsJSONRequestBody{})
+	var out SnapshotInfo
+	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(sandboxID) + "/snapshots"
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, map[string]any{}, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+	if resp.StatusCode != http.StatusCreated {
+		return nil, newAPIError(resp, body)
 	}
-	return snapshotInfoFromAPI(*resp.JSON201), nil
+	return &out, nil
 }
 
 // CreateSnapshot creates a persistent snapshot from this sandbox.
@@ -39,40 +41,35 @@ func (s *Sandbox) CreateSnapshot(ctx context.Context) (*SnapshotInfo, error) {
 
 // ListSnapshots returns one page of snapshots.
 func (c *Client) ListSnapshots(ctx context.Context, params *SnapshotListParams) ([]SnapshotInfo, *string, error) {
-	resp, err := c.api.GetSnapshotsWithResponse(ctx, snapshotListParamsToAPI(params))
+	path := "/api/v1/sbx/snapshots"
+	if params != nil {
+		q := url.Values{}
+		if params.SandboxID != nil {
+			q.Set("sandboxID", *params.SandboxID)
+		}
+		if params.NextToken != nil {
+			q.Set("nextToken", *params.NextToken)
+		}
+		if params.Limit != nil {
+			q.Set("limit", strconv.FormatInt(int64(*params.Limit), 10))
+		}
+		if encoded := q.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
+	}
+	var out []SnapshotInfo
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, nil, newAPIError(resp.HTTPResponse, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, nil, newAPIError(resp, body)
 	}
-	out := make([]SnapshotInfo, len(*resp.JSON200))
-	for i, snapshot := range *resp.JSON200 {
-		out[i] = *snapshotInfoFromAPI(snapshot)
-	}
-	next := resp.HTTPResponse.Header.Get("x-next-token")
+	next := resp.Header.Get("x-next-token")
 	if next == "" {
 		return out, nil, nil
 	}
 	return out, &next, nil
-}
-
-func snapshotListParamsToAPI(params *SnapshotListParams) *apis.GetSnapshotsParams {
-	if params == nil {
-		return nil
-	}
-	return &apis.GetSnapshotsParams{
-		SandboxID: params.SandboxID,
-		Limit:     params.Limit,
-		NextToken: params.NextToken,
-	}
-}
-
-func snapshotInfoFromAPI(snapshot apis.SnapshotInfo) *SnapshotInfo {
-	return &SnapshotInfo{
-		SnapshotID: snapshot.SnapshotID,
-		Names:      snapshot.Names,
-	}
 }
 
 // ListSnapshots returns one page of snapshots created from this sandbox.
@@ -87,16 +84,17 @@ func (s *Sandbox) ListSnapshots(ctx context.Context, params *SnapshotListParams)
 // DeleteSnapshot deletes a persistent snapshot. It returns false if the snapshot
 // was not found.
 func (c *Client) DeleteSnapshot(ctx context.Context, snapshotID string) (bool, error) {
-	resp, err := c.api.DeleteTemplatesTemplateIDWithResponse(ctx, snapshotID)
+	path := "/api/v1/sbx/snapshots/" + url.PathEscape(snapshotID)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, path, nil, nil)
 	if err != nil {
 		return false, err
 	}
-	switch resp.HTTPResponse.StatusCode {
+	switch resp.StatusCode {
 	case http.StatusOK, http.StatusNoContent:
 		return true, nil
 	case http.StatusNotFound:
 		return false, nil
 	default:
-		return false, newAPIError(resp.HTTPResponse, resp.Body)
+		return false, newAPIError(resp, body)
 	}
 }

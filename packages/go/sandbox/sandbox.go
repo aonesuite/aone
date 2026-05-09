@@ -63,10 +63,9 @@ type Sandbox struct {
 
 func newSandbox(c *Client, s *apis.Sandbox) *Sandbox {
 	sb := &Sandbox{
-		sandboxID:          s.SandboxID,
-		templateID:         s.TemplateID,
-		clientID:           s.ClientID,
-		alias:              s.Alias,
+		sandboxID:          stringValue(s.SandboxID),
+		templateID:         stringValue(s.TemplateID),
+		clientID:           stringValue(s.ClientID),
 		domain:             s.Domain,
 		trafficAccessToken: s.TrafficAccessToken,
 		client:             c,
@@ -159,14 +158,10 @@ func (c *Client) Connect(ctx context.Context, sandboxID string, params ConnectPa
 	if err != nil {
 		return nil, err
 	}
-	var sb *Sandbox
-	if resp.JSON200 != nil {
-		sb = newSandbox(c, resp.JSON200)
-	} else if resp.JSON201 != nil {
-		sb = newSandbox(c, resp.JSON201)
-	} else {
+	if resp.JSON200 == nil {
 		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
+	sb := newSandbox(c, resp.JSON200)
 	if !sb.envdTokenLoaded {
 		if err := sb.refreshEnvdToken(ctx); err != nil {
 			return nil, fmt.Errorf("connect sandbox %s: %w", sandboxID, err)
@@ -205,7 +200,7 @@ func (s *Sandbox) Kill(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
+	if resp.HTTPResponse.StatusCode != http.StatusOK && resp.HTTPResponse.StatusCode != http.StatusNoContent {
 		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
@@ -223,30 +218,22 @@ func (s *Sandbox) SetTimeout(ctx context.Context, timeout time.Duration) error {
 	}
 	timeoutSec := int32(secs)
 	resp, err := s.client.api.PostSandboxesSandboxIDTimeoutWithResponse(ctx, s.sandboxID, apis.UpdateSandboxTimeoutJSONRequestBody{
-		Timeout: timeoutSec,
+		Timeout: &timeoutSec,
 	})
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
+	if resp.HTTPResponse.StatusCode != http.StatusOK && resp.HTTPResponse.StatusCode != http.StatusNoContent {
 		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
 	}
 	return nil
 }
 
-func (s *Sandbox) refreshEnvdToken(ctx context.Context) error {
-	resp, err := s.client.api.GetSandboxesSandboxIDWithResponse(ctx, s.sandboxID)
-	if err != nil {
-		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, err)
-	}
-	if resp.JSON200 == nil {
-		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox))
-	}
-	s.envdTokenMu.Lock()
-	s.envdAccessToken = resp.JSON200.EnvdAccessToken
-	s.envdTokenLoaded = true
-	s.envdTokenMu.Unlock()
-	return nil
+// refreshEnvdToken signals that the create/connect response did not include an
+// envd access token. The detail endpoint does not expose the token, so the SDK
+// has no way to recover it after the fact and fails fast.
+func (s *Sandbox) refreshEnvdToken(_ context.Context) error {
+	return fmt.Errorf("get sandbox %s for envd token: response does not include envd access token", s.sandboxID)
 }
 
 // GetInfo fetches the latest detailed state for the sandbox.
@@ -311,12 +298,13 @@ func (s *Sandbox) GetLogs(ctx context.Context, params *GetLogsParams) (*SandboxL
 
 // Pause pauses the sandbox when the backend supports pausing for the current state.
 func (s *Sandbox) Pause(ctx context.Context) error {
-	resp, err := s.client.api.PostSandboxesSandboxIDPauseWithResponse(ctx, s.sandboxID)
+	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/pause"
+	resp, body, err := s.client.api.DoLegacyJSON(ctx, http.MethodPost, path, nil, nil)
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
+	if resp.StatusCode != http.StatusNoContent {
+		return newAPIErrorFor(resp, body, resourceSandbox)
 	}
 	return nil
 }
@@ -334,31 +322,35 @@ type ResumeParams struct {
 	AutoPause *bool
 }
 
-// Resume resumes a paused sandbox. The HTTP path is POST /sandboxes/{id}/resume
-// and a 201 response indicates success.
+// Resume resumes a paused sandbox. A 201 response indicates success.
 func (c *Client) Resume(ctx context.Context, sandboxID string, params ResumeParams) error {
-	body := apis.PostSandboxesSandboxIDResumeJSONRequestBody{
-		Timeout:   params.Timeout,
-		AutoPause: params.AutoPause,
+	body := map[string]any{}
+	if params.Timeout != nil {
+		body["timeout"] = params.Timeout
 	}
-	resp, err := c.api.PostSandboxesSandboxIDResumeWithResponse(ctx, sandboxID, body)
+	if params.AutoPause != nil {
+		body["autoPause"] = params.AutoPause
+	}
+	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(sandboxID) + "/resume"
+	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, body, nil)
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != http.StatusCreated {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
+	if resp.StatusCode != http.StatusCreated {
+		return newAPIErrorFor(resp, respBody, resourceSandbox)
 	}
 	return nil
 }
 
 // Refresh extends the sandbox lifetime using the duration in params.
 func (s *Sandbox) Refresh(ctx context.Context, params RefreshParams) error {
-	resp, err := s.client.api.PostSandboxesSandboxIDRefreshesWithResponse(ctx, s.sandboxID, params.toAPI())
+	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/refreshes"
+	resp, body, err := s.client.api.DoLegacyJSON(ctx, http.MethodPost, path, params.toAPI(), nil)
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != http.StatusNoContent {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
+	if resp.StatusCode != http.StatusNoContent {
+		return newAPIErrorFor(resp, body, resourceSandbox)
 	}
 	return nil
 }
@@ -399,14 +391,23 @@ func (c *Client) CreateAndWait(ctx context.Context, params CreateParams, opts ..
 
 // GetSandboxesMetrics returns the latest metrics for multiple sandboxes.
 func (c *Client) GetSandboxesMetrics(ctx context.Context, params *GetSandboxesMetricsParams) (*SandboxesWithMetrics, error) {
-	resp, err := c.api.GetSandboxesMetricsWithResponse(ctx, params.toAPI())
+	path := "/api/v1/sbx/sandboxes/metrics"
+	if params != nil && len(params.SandboxIds) > 0 {
+		q := url.Values{}
+		for _, id := range params.SandboxIds {
+			q.Add("sandboxIds", id)
+		}
+		path += "?" + q.Encode()
+	}
+	var out SandboxesWithMetrics
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.HTTPResponse, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, newAPIErrorFor(resp, body, resourceSandbox)
 	}
-	return sandboxesWithMetricsFromAPI(resp.JSON200), nil
+	return &out, nil
 }
 
 // Files returns the filesystem helper bound to this sandbox.

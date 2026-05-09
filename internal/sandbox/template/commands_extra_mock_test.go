@@ -42,7 +42,7 @@ func TestBuilds_HappyPath(t *testing.T) {
 	if !strings.Contains(out, "Status:") {
 		t.Fatalf("stdout = %q", out)
 	}
-	if !sawRequest(srv, "GET", "/templates/tpl-1/builds/build-1/status") {
+	if !sawRequest(srv, "GET", "/api/v1/sbx/templates/tpl-1/builds/build-1/status") {
 		t.Fatalf("status route not hit; got %+v", srv.Requests())
 	}
 }
@@ -50,7 +50,7 @@ func TestBuilds_HappyPath(t *testing.T) {
 // TestBuilds_ServerError covers the error branch when the API returns 500.
 func TestBuilds_ServerError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates/{tid}/builds/{bid}/status", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/status", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -146,7 +146,7 @@ func TestInit_AcceptsPythonSyncAlias(t *testing.T) {
 
 // TestBuild_FromDockerfile_CacheHit drives the COPY path where
 // GetTemplateFiles reports the archive as already present (default mock).
-// The build still proceeds to /v2/templates/.../builds/... but no upload
+// The build still proceeds to /api/v1/sbx/templates/.../builds/... but no upload
 // happens.
 func TestBuild_FromDockerfile_CacheHit(t *testing.T) {
 	srv := withMock(t)
@@ -163,7 +163,7 @@ func TestBuild_FromDockerfile_CacheHit(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		Build(BuildInfo{
-			Name:       "demo",
+			TemplateID: "tpl-new",
 			Dockerfile: filepath.Join(dir, "Dockerfile"),
 			Path:       dir,
 		})
@@ -171,7 +171,7 @@ func TestBuild_FromDockerfile_CacheHit(t *testing.T) {
 	if !strings.Contains(out, "already uploaded (cached)") {
 		t.Fatalf("expected cache-hit message; out = %q", out)
 	}
-	if !sawRequest(srv, "POST", "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111") {
+	if !sawRequest(srv, "POST", "/api/v1/sbx/templates/tpl-new/builds/build-1") {
 		t.Fatalf("expected start build call; got %+v", srv.Requests())
 	}
 }
@@ -190,7 +190,7 @@ func TestBuild_FromDockerfile_UploadsOnCacheMiss(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	uploadURL := srv.URL() + "/upload-target"
-	srv.Handle("GET", "/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"present":false,"url":"` + uploadURL + `"}`))
@@ -207,7 +207,7 @@ func TestBuild_FromDockerfile_UploadsOnCacheMiss(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		Build(BuildInfo{
-			Name:       "demo",
+			TemplateID: "tpl-new",
 			Dockerfile: filepath.Join(dir, "Dockerfile"),
 			Path:       dir,
 		})
@@ -228,7 +228,7 @@ func TestBuild_FromDockerfile_UploadFailureSurfaces(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	uploadURL := srv.URL() + "/upload-target"
-	srv.Handle("GET", "/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"present":false,"url":"` + uploadURL + `"}`))
@@ -246,7 +246,7 @@ func TestBuild_FromDockerfile_UploadFailureSurfaces(t *testing.T) {
 	stderr := captureStderr(t, func() {
 		_ = captureStdout(t, func() {
 			Build(BuildInfo{
-				Name:       "demo",
+				TemplateID: "tpl-new",
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				Path:       dir,
 			})
@@ -261,19 +261,16 @@ func TestBuild_FromDockerfile_UploadFailureSurfaces(t *testing.T) {
 // in Get by overriding the template GET to include a builds slice.
 func TestGet_RendersBuildsTable(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
-			"templateID":"tpl-x",
-			"buildID":"build-1","buildStatus":"ready","buildCount":1,
-			"cpuCount":2,"memoryMB":1024,"diskSizeMB":8192,
-			"envdVersion":"0.0.1","public":false,"spawnCount":0,
+			"template_id":"tpl-x",
+			"build_id":"33333333-3333-3333-3333-333333333333",
+			"build_status":"ready",
+			"cpu_count":2,"memory_mb":1024,"disk_size_mb":8192,
+			"envd_version":"0.0.1","public":false,
 			"aliases":[],"names":["x"],
-			"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z",
-			"builds":[{
-				"buildID":"33333333-3333-3333-3333-333333333333","cpuCount":2,"memoryMB":1024,"status":"ready",
-				"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z"
-			}]
+			"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"
 		}`))
 	})
 	out := captureStdout(t, func() {

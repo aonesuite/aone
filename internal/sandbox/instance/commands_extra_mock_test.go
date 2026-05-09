@@ -24,7 +24,7 @@ func TestConnect_RequiresSandboxID(t *testing.T) {
 // envd because the function bails out before reaching it.
 func TestConnect_ConnectFails(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/sandboxes/{id}/connect", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("POST", "/api/v1/sbx/sandboxes/{id}/connect", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -68,7 +68,7 @@ func TestExec_RequiresCommand(t *testing.T) {
 // any envd interaction is attempted.
 func TestExec_ConnectFails(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/sandboxes/{id}/connect", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("POST", "/api/v1/sbx/sandboxes/{id}/connect", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -108,7 +108,7 @@ func TestLogs_PrettyHappyPath(t *testing.T) {
 	if !strings.Contains(out, "hello") {
 		t.Fatalf("stdout missing log line: %q", out)
 	}
-	if !sawRequest(srv, "GET", "/sandboxes/sbx-test/logs") {
+	if !sawRequest(srv, "GET", "/api/v1/sbx/sandboxes/sbx-test/logs") {
 		t.Fatalf("logs route not hit; got %+v", srv.Requests())
 	}
 }
@@ -129,7 +129,7 @@ func TestLogs_JSONHappyPath(t *testing.T) {
 // logs and logEntries arrays come back empty.
 func TestLogs_PrettyEmptyShowsNotice(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"logs":[],"logEntries":[]}`))
 	})
@@ -144,7 +144,7 @@ func TestLogs_PrettyEmptyShowsNotice(t *testing.T) {
 // TestLogs_GetLogsFails surfaces the API error path.
 func TestLogs_GetLogsFails(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -161,11 +161,11 @@ func TestLogs_GetLogsFails(t *testing.T) {
 // printLogEntries: an entry below the configured level should not appear.
 func TestLogs_LevelFilterDropsBelow(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"logs":[],
-			"logEntries":[
+				"log_entries":[
 				{"level":"debug","message":"verbose-debug","fields":{},"timestamp":"2025-01-01T00:00:00Z"},
 				{"level":"error","message":"loud-error","fields":{"logger":"app"},"timestamp":"2025-01-01T00:00:00Z"}
 			]

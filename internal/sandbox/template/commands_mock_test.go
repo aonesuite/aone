@@ -99,7 +99,7 @@ func TestList_HappyPath(t *testing.T) {
 
 func TestList_TableEmpty(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})
@@ -113,7 +113,7 @@ func TestList_TableEmpty(t *testing.T) {
 
 func TestList_ServerError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -150,7 +150,7 @@ func TestGet_HappyPath(t *testing.T) {
 
 func TestGet_ServerError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	stderr := captureStderr(t, func() {
@@ -183,14 +183,14 @@ func TestDelete_YesFlagSkipsPrompt(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Delete(DeleteInfo{TemplateIDs: []string{"a", "b"}, Yes: true, Path: t.TempDir()})
 	})
-	if !sawRequest(srv, "DELETE", "/templates/a") || !sawRequest(srv, "DELETE", "/templates/b") {
+	if !sawRequest(srv, "DELETE", "/api/v1/sbx/templates/a") || !sawRequest(srv, "DELETE", "/api/v1/sbx/templates/b") {
 		t.Fatalf("expected DELETE for a and b; got %+v", srv.Requests())
 	}
 }
 
 func TestDelete_ServerErrorContinues(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("DELETE", "/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("DELETE", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -212,7 +212,7 @@ func TestPublish_HappyPath(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Publish(PublishInfo{TemplateIDs: []string{"tpl-1"}, Yes: true, Public: true, Path: t.TempDir()})
 	})
-	if !sawRequest(srv, "PATCH", "/templates/tpl-1") {
+	if !sawRequest(srv, "PATCH", "/api/v1/sbx/templates/tpl-1") {
 		t.Fatalf("expected PATCH /templates/tpl-1; got %+v", srv.Requests())
 	}
 }
@@ -224,7 +224,7 @@ func TestPublish_UnpublishUsesSameRoute(t *testing.T) {
 	})
 	// We confirm the route was hit; the body distinguishes publish vs
 	// unpublish but we don't decode it here.
-	if !sawRequest(srv, "PATCH", "/templates/tpl-1") {
+	if !sawRequest(srv, "PATCH", "/api/v1/sbx/templates/tpl-1") {
 		t.Fatalf("expected PATCH /templates/tpl-1; got %+v", srv.Requests())
 	}
 }
@@ -243,7 +243,7 @@ func TestPublish_NoIDsRequiresFlag(t *testing.T) {
 
 func TestPublish_ServerErrorContinues(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("PATCH", "/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("PATCH", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -280,10 +280,7 @@ func TestCreate_AutoDetectsDockerfile(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Create(BuildInfo{Name: "demo", Path: dir})
 	})
-	if !sawRequest(srv, "POST", "/v3/templates") {
-		t.Fatalf("expected POST /v3/templates; got %+v", srv.Requests())
-	}
-	if !sawRequest(srv, "POST", "/v2/templates/tpl-new/builds/11111111-1111-1111-1111-111111111111") {
-		t.Fatalf("expected start build call; got %+v", srv.Requests())
+	if !sawRequest(srv, "POST", "/api/v1/sbx/templates") {
+		t.Fatalf("expected POST /api/v1/sbx/templates; got %+v", srv.Requests())
 	}
 }

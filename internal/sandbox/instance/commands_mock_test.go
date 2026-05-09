@@ -89,7 +89,7 @@ func TestInfo_PrettyHappyPath(t *testing.T) {
 
 func TestInfo_ServerError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/sandboxes/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = io.WriteString(w, `{"code":500,"message":"boom"}`)
 	})
@@ -117,7 +117,7 @@ func TestList_HappyPath(t *testing.T) {
 
 func TestList_TableEmpty(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/v2/sandboxes", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})
@@ -137,7 +137,7 @@ func TestKill_SingleID(t *testing.T) {
 	})
 	// PrintSuccess uses fatih/color which caches os.Stdout at init, so we
 	// verify success via the server-side request log instead of stdout.
-	if !sawRequest(srv, "DELETE", "/sandboxes/sbx-test") {
+	if !sawRequest(srv, "DELETE", "/api/v1/sbx/sandboxes/sbx-test") {
 		t.Fatalf("expected DELETE /sandboxes/sbx-test; got %+v", srv.Requests())
 	}
 }
@@ -155,17 +155,17 @@ func TestKill_NoSandboxesNoOp(t *testing.T) {
 func TestKill_AllListsThenKills(t *testing.T) {
 	srv := withMock(t)
 	// Override list to return two sandboxes.
-	srv.Handle("GET", "/v2/sandboxes", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[
-			{"sandboxID":"a","templateID":"t","clientID":"c","envdVersion":"0","cpuCount":1,"memoryMB":1,"diskSizeMB":1,"startedAt":"2025-01-01T00:00:00Z","endAt":"2025-01-01T00:00:00Z","state":"running"},
-			{"sandboxID":"b","templateID":"t","clientID":"c","envdVersion":"0","cpuCount":1,"memoryMB":1,"diskSizeMB":1,"startedAt":"2025-01-01T00:00:00Z","endAt":"2025-01-01T00:00:00Z","state":"running"}
+				{"sandbox_id":"a","template_id":"t","client_id":"c","envd_version":"0","cpu_count":1,"memory_mb":1,"disk_size_mb":1,"started_at":"2025-01-01T00:00:00Z","end_at":"2025-01-01T00:00:00Z","state":"running"},
+				{"sandbox_id":"b","template_id":"t","client_id":"c","envd_version":"0","cpu_count":1,"memory_mb":1,"disk_size_mb":1,"started_at":"2025-01-01T00:00:00Z","end_at":"2025-01-01T00:00:00Z","state":"running"}
 		]`)
 	})
 	_ = captureStdout(t, func() {
 		Kill(KillInfo{All: true})
 	})
-	if !sawRequest(srv, "DELETE", "/sandboxes/a") || !sawRequest(srv, "DELETE", "/sandboxes/b") {
+	if !sawRequest(srv, "DELETE", "/api/v1/sbx/sandboxes/a") || !sawRequest(srv, "DELETE", "/api/v1/sbx/sandboxes/b") {
 		t.Fatalf("expected DELETE for a and b; got %+v", srv.Requests())
 	}
 }
@@ -175,14 +175,14 @@ func TestPause_SingleID(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Pause(PauseInfo{SandboxIDs: []string{"sbx-test"}})
 	})
-	if !sawRequest(srv, "POST", "/sandboxes/sbx-test/pause") {
+	if !sawRequest(srv, "POST", "/api/v1/sbx/sandboxes/sbx-test/pause") {
 		t.Fatalf("expected POST /sandboxes/sbx-test/pause; got %+v", srv.Requests())
 	}
 }
 
 func TestPause_PauseFails(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/sandboxes/{id}/pause", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("POST", "/api/v1/sbx/sandboxes/{id}/pause", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 	stderr := captureStderr(t, func() {
@@ -200,7 +200,7 @@ func TestResume_SingleID(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Resume(ResumeInfo{SandboxIDs: []string{"sbx-test"}})
 	})
-	if !sawRequest(srv, "POST", "/sandboxes/sbx-test/resume") {
+	if !sawRequest(srv, "POST", "/api/v1/sbx/sandboxes/sbx-test/resume") {
 		t.Fatalf("expected POST /sandboxes/sbx-test/resume; got %+v", srv.Requests())
 	}
 }
@@ -217,7 +217,7 @@ func TestMetrics_JSONOneShot(t *testing.T) {
 
 func TestMetrics_PrettyOneShotEmpty(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/sandboxes/{id}/metrics", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/sandboxes/{id}/metrics", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})

@@ -69,7 +69,7 @@ type Config struct {
 // sandboxes.
 type Client struct {
 	config *Config
-	api    apis.ClientWithResponsesInterface
+	api    *apis.ClientWithResponses
 }
 
 // NewClient constructs a Sandbox API client from Config. The function fills in

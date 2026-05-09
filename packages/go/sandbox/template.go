@@ -3,13 +3,15 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 )
 
 // ListTemplates returns templates visible to the authenticated caller. Pass nil
 // params to use the API defaults.
 func (c *Client) ListTemplates(ctx context.Context, params *ListTemplatesParams) ([]Template, error) {
-	resp, err := c.api.GetTemplatesWithResponse(ctx)
+	resp, err := c.api.GetTemplatesWithResponse(ctx, params.toAPI())
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +36,7 @@ func (c *Client) CreateTemplate(ctx context.Context, body CreateTemplateParams) 
 
 // GetTemplate returns template metadata and build history for templateID.
 func (c *Client) GetTemplate(ctx context.Context, templateID string, params *GetTemplateParams) (*TemplateWithBuilds, error) {
-	resp, err := c.api.GetTemplatesTemplateIDWithResponse(ctx, templateID, params.toAPI())
+	resp, err := c.api.GetTemplatesTemplateIDWithResponse(ctx, templateID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +75,7 @@ func (c *Client) UpdateTemplate(ctx context.Context, templateID string, body Upd
 // GetTemplateBuildStatus returns the current status for one template build,
 // optionally including a bounded log snippet.
 func (c *Client) GetTemplateBuildStatus(ctx context.Context, templateID, buildID string, params *GetBuildStatusParams) (*TemplateBuildInfo, error) {
-	resp, err := c.api.GetTemplatesTemplateIDBuildsBuildIDStatusWithResponse(ctx, templateID, buildID, params.toAPI())
+	resp, err := c.api.GetTemplatesTemplateIDBuildsBuildIDStatusWithResponse(ctx, templateID, buildID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,38 +104,43 @@ func (c *Client) StartTemplateBuild(ctx context.Context, templateID, buildID str
 	if err != nil {
 		return err
 	}
-	resp, err := c.api.PostV2TemplatesTemplateIDBuildsBuildIDWithResponse(ctx, templateID, buildID, apiBody)
+	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/builds/" + url.PathEscape(buildID)
+	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, apiBody, nil)
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != 202 {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceBuild)
+	if resp.StatusCode != http.StatusAccepted {
+		return newAPIErrorFor(resp, respBody, resourceBuild)
 	}
 	return nil
 }
 
 // GetTemplateFiles returns upload metadata for a template file bundle hash.
 func (c *Client) GetTemplateFiles(ctx context.Context, templateID, hash string) (*TemplateBuildFileUpload, error) {
-	resp, err := c.api.GetTemplatesTemplateIDFilesHashWithResponse(ctx, templateID, hash)
+	var out TemplateBuildFileUpload
+	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/files/" + url.PathEscape(hash)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceFileUpload)
+	if resp.StatusCode != http.StatusCreated {
+		return nil, newAPIErrorFor(resp, body, resourceFileUpload)
 	}
-	return templateBuildFileUploadFromAPI(resp.JSON201), nil
+	return &out, nil
 }
 
 // GetTemplateByAlias resolves a template alias to template metadata.
 func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*TemplateAliasResponse, error) {
-	resp, err := c.api.GetTemplatesAliasesAliasWithResponse(ctx, alias)
+	var out TemplateAliasResponse
+	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	if resp.StatusCode != http.StatusOK {
+		return nil, newAPIErrorFor(resp, body, resourceTemplate)
 	}
-	return templateAliasResponseFromAPI(resp.JSON200), nil
+	return &out, nil
 }
 
 // TemplateAliasExists reports whether a template alias exists.
@@ -141,64 +148,61 @@ func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*Templat
 // someone else (403); false when the alias is not found (404). Any other
 // status is returned as an error.
 func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, error) {
-	resp, err := c.api.GetTemplatesAliasesAliasWithResponse(ctx, alias)
+	var out TemplateAliasResponse
+	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return false, err
 	}
-	switch resp.HTTPResponse.StatusCode {
-	case 200:
-		return resp.JSON200 != nil, nil
-	case 403:
+	switch resp.StatusCode {
+	case http.StatusOK:
 		return true, nil
-	case 404:
+	case http.StatusForbidden:
+		return true, nil
+	case http.StatusNotFound:
 		return false, nil
 	default:
-		return false, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+		return false, newAPIErrorFor(resp, body, resourceTemplate)
 	}
 }
 
 // AssignTemplateTags assigns tags to the target described by body.
 func (c *Client) AssignTemplateTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
-	resp, err := c.api.PostTemplatesTagsWithResponse(ctx, body.toAPI())
+	var out AssignedTemplateTags
+	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, "/api/v1/sbx/templates/tags", body.toAPI(), &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	if resp.StatusCode != http.StatusCreated {
+		return nil, newAPIErrorFor(resp, respBody, resourceTemplate)
 	}
-	return assignedTemplateTagsFromAPI(resp.JSON201), nil
+	return &out, nil
 }
 
 // DeleteTemplateTags removes tags from a template target.
 func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) error {
-	resp, err := c.api.DeleteTemplatesTagsWithResponse(ctx, body.toAPI())
+	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, "/api/v1/sbx/templates/tags", body.toAPI(), nil)
 	if err != nil {
 		return err
 	}
-	if resp.HTTPResponse.StatusCode != 204 {
-		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	if resp.StatusCode != http.StatusNoContent {
+		return newAPIErrorFor(resp, respBody, resourceTemplate)
 	}
 	return nil
 }
 
 // GetTemplateTags returns all tags currently attached to templateID.
 func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
-	resp, err := c.api.GetTemplatesTemplateIDTagsWithResponse(ctx, templateID)
+	var out []TemplateTagInfo
+	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/tags"
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
+	if resp.StatusCode != http.StatusOK {
+		return nil, newAPIErrorFor(resp, body, resourceTemplate)
 	}
-	tags := make([]TemplateTagInfo, 0, len(*resp.JSON200))
-	for _, t := range *resp.JSON200 {
-		tags = append(tags, TemplateTagInfo{
-			BuildID:   t.BuildID.String(),
-			Tag:       t.Tag,
-			CreatedAt: t.CreatedAt,
-		})
-	}
-	return tags, nil
+	return out, nil
 }
 
 // AssignTags is a shorter alias for AssignTemplateTags. Prefer

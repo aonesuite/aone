@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
@@ -58,18 +60,23 @@ type Volume struct {
 	VolumeID string
 	Name     string
 	Token    string
+
+	contentOnce   sync.Once
+	cachedContent *volumeapi.ClientWithResponses
+	contentErr    error
 }
 
 // CreateVolume creates a new persistent volume.
 func (c *Client) CreateVolume(ctx context.Context, name string) (*Volume, error) {
-	resp, err := c.api.PostVolumesWithResponse(ctx, apis.PostVolumesJSONRequestBody{Name: name})
+	var out apis.VolumeAndToken
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodPost, "/volumes", map[string]string{"name": name}, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
+	if resp.StatusCode != http.StatusCreated {
+		return nil, newAPIErrorFor(resp, body, resourceVolume)
 	}
-	return volumeFromAPI(c, *resp.JSON201), nil
+	return volumeFromAPI(c, out), nil
 }
 
 // ConnectVolume returns a Volume handle for an existing volume.
@@ -79,45 +86,43 @@ func (c *Client) ConnectVolume(ctx context.Context, volumeID string) (*Volume, e
 
 // GetVolumeInfo fetches volume metadata and content token.
 func (c *Client) GetVolumeInfo(ctx context.Context, volumeID string) (*Volume, error) {
-	resp, err := c.api.GetVolumesVolumeIDWithResponse(ctx, volumeID)
+	var out apis.VolumeAndToken
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/volumes/"+url.PathEscape(volumeID), nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
+	if resp.StatusCode != http.StatusOK {
+		return nil, newAPIErrorFor(resp, body, resourceVolume)
 	}
-	return volumeFromAPI(c, *resp.JSON200), nil
+	return volumeFromAPI(c, out), nil
 }
 
 // ListVolumes lists persistent volumes.
 func (c *Client) ListVolumes(ctx context.Context) ([]VolumeInfo, error) {
-	resp, err := c.api.GetVolumesWithResponse(ctx)
+	var out []VolumeInfo
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/volumes", nil, &out)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
-	}
-	out := make([]VolumeInfo, len(*resp.JSON200))
-	for i, volume := range *resp.JSON200 {
-		out[i] = VolumeInfo{VolumeID: volume.VolumeID, Name: volume.Name}
+	if resp.StatusCode != http.StatusOK {
+		return nil, newAPIErrorFor(resp, body, resourceVolume)
 	}
 	return out, nil
 }
 
 // DestroyVolume destroys a volume. It returns false when the volume is missing.
 func (c *Client) DestroyVolume(ctx context.Context, volumeID string) (bool, error) {
-	resp, err := c.api.DeleteVolumesVolumeIDWithResponse(ctx, volumeID)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, "/volumes/"+url.PathEscape(volumeID), nil, nil)
 	if err != nil {
 		return false, err
 	}
-	switch resp.HTTPResponse.StatusCode {
+	switch resp.StatusCode {
 	case http.StatusOK, http.StatusNoContent:
 		return true, nil
 	case http.StatusNotFound:
 		return false, nil
 	default:
-		return false, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceVolume)
+		return false, newAPIErrorFor(resp, body, resourceVolume)
 	}
 }
 
@@ -325,16 +330,19 @@ func volumeFromAPI(c *Client, volume apis.VolumeAndToken) *Volume {
 }
 
 func (v *Volume) contentClient() (*volumeapi.ClientWithResponses, error) {
-	return volumeapi.NewClientWithResponses(v.client.config.Endpoint,
-		volumeapi.WithHTTPClient(v.client.config.HTTPClient),
-		volumeapi.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			if v.Token != "" {
-				req.Header.Set("Authorization", "Bearer "+v.Token)
-			}
-			setReqidHeader(ctx, req)
-			return nil
-		}),
-	)
+	v.contentOnce.Do(func() {
+		v.cachedContent, v.contentErr = volumeapi.NewClientWithResponses(v.client.config.Endpoint,
+			volumeapi.WithHTTPClient(v.client.config.HTTPClient),
+			volumeapi.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+				if v.Token != "" {
+					req.Header.Set("Authorization", "Bearer "+v.Token)
+				}
+				setReqidHeader(ctx, req)
+				return nil
+			}),
+		)
+	})
+	return v.cachedContent, v.contentErr
 }
 
 func makeDirParams(path string, opts *VolumeWriteOptions) *volumeapi.PostVolumecontentVolumeIDDirParams {

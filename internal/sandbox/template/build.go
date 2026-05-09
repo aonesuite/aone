@@ -111,15 +111,36 @@ func Build(info BuildInfo) {
 			sbClient.PrintError("template name (--name) or template ID (--template-id) is required")
 			return
 		}
+		if info.Dockerfile == "" && info.FromImage == "" && info.FromTemplate == "" {
+			sbClient.PrintError("--from-image, --from-template, or --dockerfile is required")
+			return
+		}
 
 		createParams := sandbox.CreateTemplateParams{
-			Name: &info.Name,
+			Name:     &info.Name,
+			StartCmd: stringPtrFromNonEmpty(info.StartCmd),
+			ReadyCmd: stringPtrFromNonEmpty(info.ReadyCmd),
 		}
 		if info.CPUCount > 0 {
 			createParams.CPUCount = &info.CPUCount
 		}
 		if info.MemoryMB > 0 {
 			createParams.MemoryMB = &info.MemoryMB
+		}
+		if info.Dockerfile != "" {
+			content, rErr := os.ReadFile(info.Dockerfile)
+			if rErr != nil {
+				sbClient.PrintError("read Dockerfile failed: %v", rErr)
+				return
+			}
+			dockerfile := string(content)
+			createParams.Dockerfile = &dockerfile
+		} else if info.FromImage != "" {
+			dockerfile := "FROM " + info.FromImage + "\n"
+			createParams.Dockerfile = &dockerfile
+		} else if info.FromTemplate != "" {
+			dockerfile := "FROM " + info.FromTemplate + "\n"
+			createParams.Dockerfile = &dockerfile
 		}
 
 		fmt.Printf("Creating template %s...\n", info.Name)
@@ -156,12 +177,16 @@ func Build(info BuildInfo) {
 		}
 	}
 
-	if info.Dockerfile != "" {
+	if info.Dockerfile != "" && info.TemplateID != "" {
 		if err := buildFromDockerfile(ctx, client, templateID, buildID, info); err != nil {
 			sbClient.PrintError("%v", err)
 			return
 		}
-	} else {
+	} else if info.TemplateID != "" {
+		// Rebuild flow: a Dockerfile/from-image/from-template was provided and
+		// we need to start a new build for the existing template. The
+		// fresh-template path above already kicked off the first build via
+		// CreateTemplate, so it falls through to the wait/exit branch below.
 		// Validate the build source.
 		if info.FromImage == "" && info.FromTemplate == "" {
 			sbClient.PrintError("--from-image, --from-template, or --dockerfile is required")
@@ -251,6 +276,13 @@ func Build(info BuildInfo) {
 		case <-time.After(3 * time.Second):
 		}
 	}
+}
+
+func stringPtrFromNonEmpty(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return &v
 }
 
 // buildFromDockerfile handles the v2 Dockerfile build flow:

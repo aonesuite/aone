@@ -1,6 +1,8 @@
 package sandbox
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
@@ -184,15 +186,6 @@ type GetSandboxesMetricsParams struct {
 	SandboxIds []string
 }
 
-func (p *GetSandboxesMetricsParams) toAPI() *apis.GetSandboxesMetricsParams {
-	if p == nil {
-		return nil
-	}
-	return &apis.GetSandboxesMetricsParams{
-		SandboxIds: p.SandboxIds,
-	}
-}
-
 // SandboxInfo is the detailed state returned for one sandbox.
 type SandboxInfo struct {
 	// SandboxID is the stable identifier used by API and CLI operations.
@@ -304,59 +297,34 @@ func sandboxInfoFromAPI(d *apis.SandboxDetail) *SandboxInfo {
 		return nil
 	}
 	info := &SandboxInfo{
-		SandboxID:           d.SandboxID,
-		TemplateID:          d.TemplateID,
-		ClientID:            d.ClientID,
-		Alias:               d.Alias,
-		Domain:              d.Domain,
-		State:               SandboxState(d.State),
-		CPUCount:            d.CPUCount,
-		MemoryMB:            d.MemoryMB,
-		DiskSizeMB:          d.DiskSizeMB,
-		EnvdVersion:         d.EnvdVersion,
-		StartedAt:           d.StartedAt,
-		EndAt:               d.EndAt,
-		AllowInternetAccess: d.AllowInternetAccess,
+		SandboxID:   stringValue(d.SandboxID),
+		TemplateID:  stringValue(d.TemplateID),
+		ClientID:    stringValue(d.ClientID),
+		State:       SandboxState(stringValue(d.State)),
+		EnvdVersion: stringValue(d.EnvdVersion),
 	}
-	if d.Metadata != nil {
-		m := Metadata(*d.Metadata)
-		info.Metadata = &m
+	if d.StartedAt != nil {
+		info.StartedAt = *d.StartedAt
 	}
-	if d.Network != nil {
-		info.Network = networkConfigFromAPI(d.Network)
-	}
-	if d.Lifecycle != nil {
-		info.Lifecycle = &SandboxInfoLifecycle{
-			OnTimeout:  LifecycleAction(d.Lifecycle.OnTimeout),
-			AutoResume: d.Lifecycle.AutoResume,
-		}
-	}
-	if d.VolumeMounts != nil {
-		info.VolumeMounts = volumeMountsFromAPI(*d.VolumeMounts)
+	if d.EndAt != nil {
+		info.EndAt = *d.EndAt
 	}
 	return info
 }
 
 func listedSandboxFromAPI(a apis.ListedSandbox) ListedSandbox {
 	ls := ListedSandbox{
-		SandboxID:   a.SandboxID,
-		TemplateID:  a.TemplateID,
-		ClientID:    a.ClientID,
-		Alias:       a.Alias,
-		State:       SandboxState(a.State),
-		CPUCount:    a.CPUCount,
-		MemoryMB:    a.MemoryMB,
-		DiskSizeMB:  a.DiskSizeMB,
-		EnvdVersion: a.EnvdVersion,
-		StartedAt:   a.StartedAt,
-		EndAt:       a.EndAt,
+		SandboxID:   stringValue(a.SandboxID),
+		TemplateID:  stringValue(a.TemplateID),
+		ClientID:    stringValue(a.ClientID),
+		State:       SandboxState(stringValue(a.State)),
+		EnvdVersion: stringValue(a.EnvdVersion),
 	}
-	if a.Metadata != nil {
-		m := Metadata(*a.Metadata)
-		ls.Metadata = &m
+	if a.StartedAt != nil {
+		ls.StartedAt = *a.StartedAt
 	}
-	if a.VolumeMounts != nil {
-		ls.VolumeMounts = volumeMountsFromAPI(*a.VolumeMounts)
+	if a.EndAt != nil {
+		ls.EndAt = *a.EndAt
 	}
 	return ls
 }
@@ -373,15 +341,21 @@ func listedSandboxesFromAPI(a []apis.ListedSandbox) []ListedSandbox {
 }
 
 func sandboxMetricFromAPI(a apis.SandboxMetric) SandboxMetric {
+	ts := timeFromUnix(a.TimestampUnix)
+	if a.Timestamp != nil {
+		if parsed, err := time.Parse(time.RFC3339Nano, *a.Timestamp); err == nil {
+			ts = parsed
+		}
+	}
 	return SandboxMetric{
-		CPUCount:      a.CPUCount,
-		CPUUsedPct:    a.CPUUsedPct,
-		MemTotal:      a.MemTotal,
-		MemUsed:       a.MemUsed,
-		DiskTotal:     a.DiskTotal,
-		DiskUsed:      a.DiskUsed,
-		Timestamp:     a.Timestamp,
-		TimestampUnix: a.TimestampUnix,
+		CPUCount:      int32Value(a.CPUCount),
+		CPUUsedPct:    float32Value(a.CPUUsedPct),
+		MemTotal:      int64Value(a.MemTotal),
+		MemUsed:       int64Value(a.MemUsed),
+		DiskTotal:     int64Value(a.DiskTotal),
+		DiskUsed:      int64Value(a.DiskUsed),
+		Timestamp:     ts,
+		TimestampUnix: int64Value(a.TimestampUnix),
 	}
 }
 
@@ -401,30 +375,19 @@ func sandboxLogsFromAPI(a *apis.SandboxLogs) *SandboxLogs {
 		return nil
 	}
 	result := &SandboxLogs{
-		Logs:       make([]SandboxLog, 0, len(a.Logs)),
-		LogEntries: make([]SandboxLogEntry, 0, len(a.LogEntries)),
+		Logs:       make([]SandboxLog, 0),
+		LogEntries: make([]SandboxLogEntry, 0),
 	}
-	for _, l := range a.Logs {
-		result.Logs = append(result.Logs, SandboxLog{Line: l.Line, Timestamp: l.Timestamp})
+	if a.Logs != nil {
+		for _, e := range *a.Logs {
+			entry := sandboxLogEntryFromAPI(e)
+			result.Logs = append(result.Logs, SandboxLog{Line: entry.Message, Timestamp: entry.Timestamp})
+		}
 	}
-	for _, e := range a.LogEntries {
-		result.LogEntries = append(result.LogEntries, SandboxLogEntry{
-			Level:     LogLevel(e.Level),
-			Message:   e.Message,
-			Fields:    e.Fields,
-			Timestamp: e.Timestamp,
-		})
-	}
-	return result
-}
-
-func sandboxesWithMetricsFromAPI(a *apis.SandboxesWithMetrics) *SandboxesWithMetrics {
-	if a == nil {
-		return nil
-	}
-	result := &SandboxesWithMetrics{Sandboxes: make(map[string]SandboxMetric, len(a.Sandboxes))}
-	for k, v := range a.Sandboxes {
-		result.Sandboxes[k] = sandboxMetricFromAPI(v)
+	if a.LogEntries != nil {
+		for _, e := range *a.LogEntries {
+			result.LogEntries = append(result.LogEntries, sandboxLogEntryFromAPI(e))
+		}
 	}
 	return result
 }
@@ -434,47 +397,27 @@ func sandboxesWithMetricsFromAPI(a *apis.SandboxesWithMetrics) *SandboxesWithMet
 
 func (p *CreateParams) toAPI() (apis.CreateSandboxJSONRequestBody, error) {
 	body := apis.CreateSandboxJSONRequestBody{
-		TemplateID:          p.TemplateID,
+		TemplateID:          &p.TemplateID,
 		Timeout:             p.Timeout,
-		AutoPause:           p.AutoPause,
 		AllowInternetAccess: p.AllowInternetAccess,
 		Secure:              p.Secure,
 	}
 	if p.EnvVars != nil {
-		ev := apis.EnvVars(*p.EnvVars)
-		body.EnvVars = &ev
+		body.EnvVars = (*map[string]string)(p.EnvVars)
 	}
 	if p.Metadata != nil {
-		m := apis.SandboxMetadata(*p.Metadata)
+		m := map[string]string(*p.Metadata)
 		body.Metadata = &m
 	}
 	if p.Network != nil {
 		body.Network = networkConfigToAPI(p.Network)
-	}
-	if p.Lifecycle != nil {
-		autoPause := p.Lifecycle.OnTimeout == LifecycleActionPause
-		body.AutoPause = &autoPause
-		if p.Lifecycle.AutoResume != nil {
-			body.AutoResume = &apis.SandboxAutoResumeConfig{Enabled: *p.Lifecycle.AutoResume}
-		}
-	}
-	if p.MCP != nil {
-		mcp := apis.Mcp(*p.MCP)
-		body.Mcp = &mcp
-	}
-	if len(p.VolumeMounts) > 0 {
-		mounts := make([]apis.SandboxVolumeMount, 0, len(p.VolumeMounts))
-		for path, name := range p.VolumeMounts {
-			mounts = append(mounts, apis.SandboxVolumeMount{Name: name, Path: path})
-		}
-		body.VolumeMounts = &mounts
 	}
 	return body, nil
 }
 
 func (p *ConnectParams) toAPI() apis.ConnectSandboxJSONRequestBody {
 	return apis.ConnectSandboxJSONRequestBody{
-		Timeout: p.Timeout,
+		Timeout: &p.Timeout,
 	}
 }
 
@@ -489,16 +432,12 @@ func (p *ListParams) toAPI() *apis.ListSandboxesV2Params {
 		return nil
 	}
 	params := &apis.ListSandboxesV2Params{
-		Metadata:  p.Metadata,
-		NextToken: p.NextToken,
-		Limit:     p.Limit,
+		Cursor: p.NextToken,
+		Limit:  p.Limit,
 	}
 	if p.State != nil {
-		states := make([]apis.SandboxState, len(*p.State))
-		for i, s := range *p.State {
-			states[i] = apis.SandboxState(s)
-		}
-		params.State = &states
+		state := joinSandboxStates(*p.State)
+		params.State = &state
 	}
 	return params
 }
@@ -515,22 +454,89 @@ func networkConfigToAPI(n *NetworkConfig) *apis.SandboxNetworkConfig {
 	}
 }
 
-func networkConfigFromAPI(n *apis.SandboxNetworkConfig) *NetworkConfig {
-	if n == nil {
-		return nil
+func sandboxLogEntryFromAPI(e apis.ServiceSandboxLogEntry) SandboxLogEntry {
+	ts := parseTime(stringValue(e.Timestamp))
+	fields := map[string]string(nil)
+	if e.Fields != nil {
+		fields = *e.Fields
 	}
-	return &NetworkConfig{
-		AllowOut:           n.AllowOut,
-		AllowPublicTraffic: n.AllowPublicTraffic,
-		DenyOut:            n.DenyOut,
-		MaskRequestHost:    n.MaskRequestHost,
+	return SandboxLogEntry{
+		Level:     LogLevel(stringValue(e.Level)),
+		Message:   stringValue(e.Message),
+		Fields:    fields,
+		Timestamp: ts,
 	}
 }
 
-func volumeMountsFromAPI(mounts []apis.SandboxVolumeMount) []VolumeMount {
-	result := make([]VolumeMount, len(mounts))
-	for i, m := range mounts {
-		result[i] = VolumeMount{Name: m.Name, Path: m.Path}
+func stringValue(v *string) string {
+	if v == nil {
+		return ""
 	}
-	return result
+	return *v
+}
+
+func int32Value(v *int32) int32 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+func int64Value(v *int64) int64 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+func float32Value(v *float32) float32 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+func boolValue(v *bool) bool {
+	if v == nil {
+		return false
+	}
+	return *v
+}
+
+func timeValue(v *time.Time) time.Time {
+	if v == nil {
+		return time.Time{}
+	}
+	return *v
+}
+
+func timeFromUnix(v *int64) time.Time {
+	if v == nil || *v == 0 {
+		return time.Time{}
+	}
+	return time.Unix(*v, 0).UTC()
+}
+
+func parseTime(v string) time.Time {
+	if v == "" {
+		return time.Time{}
+	}
+	if parsed, err := time.Parse(time.RFC3339Nano, v); err == nil {
+		return parsed
+	}
+	if unix, err := strconv.ParseInt(v, 10, 64); err == nil {
+		return time.Unix(unix, 0).UTC()
+	}
+	return time.Time{}
+}
+
+func joinSandboxStates(states []SandboxState) string {
+	if len(states) == 0 {
+		return ""
+	}
+	parts := make([]string, len(states))
+	for i, s := range states {
+		parts[i] = string(s)
+	}
+	return strings.Join(parts, ",")
 }

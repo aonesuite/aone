@@ -108,20 +108,34 @@ type CreateTemplateParams struct {
 
 	CPUCount *int32
 
+	DiskSizeMB *int32
+
+	Dockerfile *string
+
 	MemoryMB *int32
 
 	Name *string
+
+	Public *bool
+
+	ReadyCmd *string
+
+	StartCmd *string
 
 	Tags *[]string
 }
 
 func (p *CreateTemplateParams) toAPI() apis.CreateTemplateV3JSONRequestBody {
 	return apis.CreateTemplateV3JSONRequestBody{
-		Alias:    p.Alias,
-		CPUCount: p.CPUCount,
-		MemoryMB: p.MemoryMB,
-		Name:     p.Name,
-		Tags:     p.Tags,
+		Alias:      p.Alias,
+		CPUCount:   p.CPUCount,
+		DiskSizeMb: p.DiskSizeMB,
+		Dockerfile: p.Dockerfile,
+		MemoryMb:   p.MemoryMB,
+		Name:       p.Name,
+		Public:     p.Public,
+		ReadyCmd:   p.ReadyCmd,
+		StartCmd:   p.StartCmd,
 	}
 }
 
@@ -184,6 +198,13 @@ func (p *StartTemplateBuildParams) toAPI() (apis.StartTemplateBuildV2JSONRequest
 type ListTemplatesParams struct {
 }
 
+func (p *ListTemplatesParams) toAPI() *apis.GetTemplatesParams {
+	if p == nil {
+		return nil
+	}
+	return &apis.GetTemplatesParams{}
+}
+
 // GetTemplateParams controls pagination when retrieving template builds.
 type GetTemplateParams struct {
 	// NextToken continues a previous paginated request.
@@ -191,16 +212,6 @@ type GetTemplateParams struct {
 
 	// Limit caps the number of builds returned.
 	Limit *int32
-}
-
-func (p *GetTemplateParams) toAPI() *apis.GetTemplateParams {
-	if p == nil {
-		return nil
-	}
-	return &apis.GetTemplateParams{
-		NextToken: p.NextToken,
-		Limit:     p.Limit,
-	}
 }
 
 // GetBuildStatusParams controls build-status log snippets returned with status.
@@ -213,21 +224,6 @@ type GetBuildStatusParams struct {
 
 	// Level filters log entries by severity.
 	Level *LogLevel
-}
-
-func (p *GetBuildStatusParams) toAPI() *apis.GetTemplateBuildStatusParams {
-	if p == nil {
-		return nil
-	}
-	params := &apis.GetTemplateBuildStatusParams{
-		LogsOffset: p.LogsOffset,
-		Limit:      p.Limit,
-	}
-	if p.Level != nil {
-		level := apis.LogLevel(*p.Level)
-		params.Level = &level
-	}
-	return params
 }
 
 // GetBuildLogsParams controls paginated template build log retrieval.
@@ -252,15 +248,15 @@ func (p *GetBuildLogsParams) toAPI() *apis.GetTemplateBuildLogsParams {
 		Limit:  p.Limit,
 	}
 	if p.Direction != nil {
-		dir := apis.LogsDirection(*p.Direction)
+		dir := string(*p.Direction)
 		params.Direction = &dir
 	}
 	if p.Level != nil {
-		level := apis.LogLevel(*p.Level)
+		level := string(*p.Level)
 		params.Level = &level
 	}
 	if p.Source != nil {
-		src := apis.LogsSource(*p.Source)
+		src := string(*p.Source)
 		params.Source = &src
 	}
 	return params
@@ -400,21 +396,22 @@ type TemplateTagInfo struct {
 // ---------------------------------------------------------------------------
 
 func templateFromAPI(a apis.Template) Template {
+	aliases := []string(nil)
+	if a.Aliases != nil {
+		aliases = *a.Aliases
+	}
 	return Template{
-		TemplateID:    a.TemplateID,
-		Aliases:       a.Aliases,
-		BuildID:       a.BuildID,
-		BuildStatus:   TemplateBuildStatus(a.BuildStatus),
-		BuildCount:    a.BuildCount,
-		CPUCount:      a.CPUCount,
-		MemoryMB:      a.MemoryMB,
-		DiskSizeMB:    a.DiskSizeMB,
-		EnvdVersion:   a.EnvdVersion,
-		Public:        a.Public,
-		SpawnCount:    a.SpawnCount,
-		CreatedAt:     a.CreatedAt,
-		UpdatedAt:     a.UpdatedAt,
-		LastSpawnedAt: a.LastSpawnedAt,
+		TemplateID:  stringValue(a.TemplateID),
+		Aliases:     aliases,
+		BuildID:     stringValue(a.BuildID),
+		BuildStatus: TemplateBuildStatus(stringValue(a.BuildStatus)),
+		CPUCount:    int32Value(a.CPUCount),
+		MemoryMB:    int32Value(a.MemoryMb),
+		DiskSizeMB:  int32Value(a.DiskSizeMb),
+		EnvdVersion: stringValue(a.EnvdVersion),
+		Public:      boolValue(a.Public),
+		CreatedAt:   timeValue(a.CreatedAt),
+		UpdatedAt:   timeValue(a.UpdatedAt),
 	}
 }
 
@@ -429,36 +426,31 @@ func templatesFromAPI(a []apis.Template) []Template {
 	return result
 }
 
-func templateBuildFromAPI(a apis.TemplateBuild) TemplateBuild {
-	return TemplateBuild{
-		BuildID:     a.BuildID.String(),
-		Status:      TemplateBuildStatus(a.Status),
-		CPUCount:    a.CPUCount,
-		MemoryMB:    a.MemoryMB,
-		DiskSizeMB:  a.DiskSizeMB,
-		EnvdVersion: a.EnvdVersion,
-		CreatedAt:   a.CreatedAt,
-		UpdatedAt:   a.UpdatedAt,
-		FinishedAt:  a.FinishedAt,
-	}
-}
-
 func templateWithBuildsFromAPI(a *apis.TemplateWithBuilds) *TemplateWithBuilds {
 	if a == nil {
 		return nil
 	}
 	result := &TemplateWithBuilds{
-		TemplateID:    a.TemplateID,
-		Aliases:       a.Aliases,
-		Public:        a.Public,
-		SpawnCount:    a.SpawnCount,
-		CreatedAt:     a.CreatedAt,
-		UpdatedAt:     a.UpdatedAt,
-		LastSpawnedAt: a.LastSpawnedAt,
-		Builds:        make([]TemplateBuild, 0, len(a.Builds)),
+		TemplateID: stringValue(a.TemplateID),
+		Public:     boolValue(a.Public),
+		CreatedAt:  timeValue(a.CreatedAt),
+		UpdatedAt:  timeValue(a.UpdatedAt),
+		Builds:     []TemplateBuild{},
 	}
-	for _, b := range a.Builds {
-		result.Builds = append(result.Builds, templateBuildFromAPI(b))
+	if a.Aliases != nil {
+		result.Aliases = *a.Aliases
+	}
+	if a.BuildID != nil || a.BuildStatus != nil {
+		result.Builds = append(result.Builds, TemplateBuild{
+			BuildID:     stringValue(a.BuildID),
+			Status:      TemplateBuildStatus(stringValue(a.BuildStatus)),
+			CPUCount:    int32Value(a.CPUCount),
+			MemoryMB:    int32Value(a.MemoryMb),
+			DiskSizeMB:  a.DiskSizeMb,
+			EnvdVersion: a.EnvdVersion,
+			CreatedAt:   timeValue(a.CreatedAt),
+			UpdatedAt:   timeValue(a.UpdatedAt),
+		})
 	}
 	return result
 }
@@ -468,10 +460,9 @@ func templateBuildInfoFromAPI(a *apis.TemplateBuildInfo) *TemplateBuildInfo {
 		return nil
 	}
 	return &TemplateBuildInfo{
-		TemplateID: a.TemplateID,
-		BuildID:    a.BuildID,
-		Status:     TemplateBuildStatus(a.Status),
-		Logs:       a.Logs,
+		TemplateID: stringValue(a.TemplateID),
+		BuildID:    stringValue(a.BuildID),
+		Status:     TemplateBuildStatus(stringValue(a.Status)),
 	}
 }
 
@@ -479,14 +470,16 @@ func templateBuildLogsFromAPI(a *apis.TemplateBuildLogsResponse) *TemplateBuildL
 	if a == nil {
 		return nil
 	}
-	result := &TemplateBuildLogs{Logs: make([]BuildLogEntry, 0, len(a.Logs))}
-	for _, e := range a.Logs {
-		result.Logs = append(result.Logs, BuildLogEntry{
-			Level:     LogLevel(e.Level),
-			Message:   e.Message,
-			Step:      e.Step,
-			Timestamp: e.Timestamp,
-		})
+	result := &TemplateBuildLogs{Logs: []BuildLogEntry{}}
+	if a.Logs != nil {
+		for _, e := range *a.Logs {
+			result.Logs = append(result.Logs, BuildLogEntry{
+				Level:     LogLevel(stringValue(e.Level)),
+				Message:   stringValue(e.Message),
+				Step:      e.Source,
+				Timestamp: parseTime(stringValue(e.Timestamp)),
+			})
+		}
 	}
 	return result
 }
@@ -496,41 +489,8 @@ func templateCreateResponseFromAPI(a *apis.TemplateRequestResponseV3) *TemplateC
 		return nil
 	}
 	return &TemplateCreateResponse{
-		TemplateID: a.TemplateID,
-		BuildID:    a.BuildID,
-		Aliases:    a.Aliases,
-		Names:      a.Names,
-		Tags:       a.Tags,
-		Public:     a.Public,
-	}
-}
-
-func templateBuildFileUploadFromAPI(a *apis.TemplateBuildFileUpload) *TemplateBuildFileUpload {
-	if a == nil {
-		return nil
-	}
-	return &TemplateBuildFileUpload{
-		Present: a.Present,
-		URL:     a.URL,
-	}
-}
-
-func templateAliasResponseFromAPI(a *apis.TemplateAliasResponse) *TemplateAliasResponse {
-	if a == nil {
-		return nil
-	}
-	return &TemplateAliasResponse{
-		TemplateID: a.TemplateID,
-		Public:     a.Public,
-	}
-}
-
-func assignedTemplateTagsFromAPI(a *apis.AssignedTemplateTags) *AssignedTemplateTags {
-	if a == nil {
-		return nil
-	}
-	return &AssignedTemplateTags{
-		BuildID: a.BuildID.String(),
-		Tags:    a.Tags,
+		TemplateID: stringValue(a.TemplateID),
+		BuildID:    stringValue(a.BuildID),
+		Public:     boolValue(a.Public),
 	}
 }

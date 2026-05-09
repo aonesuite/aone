@@ -1,0 +1,1227 @@
+components:
+  responses:
+    HTTPError:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/HTTPError"
+      description: Error response
+  schemas:
+    HTTPError:
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        error:
+          type: string
+      required:
+      - code
+      - error
+      type: object
+    handler_SandboxDetailResponse:
+      properties:
+        api_key_id:
+          description: APIKeyID is the ID of the API key that created the sandbox.
+          type: string
+        client_id:
+          description: ClientID identifies this platform to SDK clients.
+          type: string
+        end_at:
+          description: EndAt is the scheduled or actual sandbox end time.
+          format: date-time
+          nullable: true
+          type: string
+        envd_version:
+          description: EnvdVersion is the envd component version inside the sandbox.
+          type: string
+        sandbox_id:
+          description: SandboxID is the sandbox instance ID.
+          type: string
+        started_at:
+          description: StartedAt is the sandbox start time.
+          format: date-time
+          nullable: true
+          type: string
+        state:
+          description: State is the current sandbox state.
+          type: string
+        template_id:
+          description: TemplateID is the template used by the sandbox.
+          type: string
+      type: object
+    handler_SandboxLogsResponse:
+      properties:
+        log_entries:
+          description: LogEntries is the structured log entry list field.
+          items:
+            $ref: "#/components/schemas/service_SandboxLogEntry"
+          type: array
+        logs:
+          description: Logs is the legacy SDK-compatible log list field.
+          items:
+            $ref: "#/components/schemas/service_SandboxLogEntry"
+          type: array
+      type: object
+    handler_SandboxMetricResponse:
+      properties:
+        cpu_count:
+          description: CPUCount is the number of CPUs available to the sandbox.
+          format: int32
+          type: integer
+        cpu_used_pct:
+          description: CPUUsedPct is the CPU usage percentage.
+          type: number
+        disk_total:
+          description: DiskTotal is the total disk space in bytes.
+          format: int64
+          type: integer
+        disk_used:
+          description: DiskUsed is the used disk space in bytes.
+          format: int64
+          type: integer
+        mem_cache:
+          description: MemCache is the cached memory in bytes.
+          format: int64
+          type: integer
+        mem_total:
+          description: MemTotal is the total memory in bytes.
+          format: int64
+          type: integer
+        mem_used:
+          description: MemUsed is the used memory in bytes.
+          format: int64
+          type: integer
+        timestamp:
+          description: Timestamp is the provider-formatted sample time.
+          type: string
+        timestamp_unix:
+          description: TimestampUnix is the Unix timestamp for the sample time.
+          format: int64
+          type: integer
+      type: object
+    handler_SandboxNetworkRouteConfig:
+      properties:
+        allow_out:
+          description: AllowOut lists outbound targets that are explicitly allowed.
+          items:
+            type: string
+          type: array
+        allow_public_traffic:
+          description: AllowPublicTraffic controls whether public traffic may reach the sandbox.
+          type: boolean
+        deny_out:
+          description: DenyOut lists outbound targets that are explicitly denied.
+          items:
+            type: string
+          type: array
+        mask_request_host:
+          description: MaskRequestHost specifies the request host to mask or rewrite.
+          type: string
+      type: object
+    handler_SandboxResponse:
+      properties:
+        client_id:
+          description: ClientID identifies this platform to SDK clients.
+          type: string
+        domain:
+          description: Domain is the sandbox access domain returned by the provider.
+          type: string
+        envd_access_token:
+          description: EnvdAccessToken is the temporary access token required to connect to envd.
+          type: string
+        envd_version:
+          description: EnvdVersion is the envd component version inside the sandbox.
+          type: string
+        sandbox_id:
+          description: SandboxID is the sandbox instance ID.
+          type: string
+        template_id:
+          description: TemplateID is the template used by the sandbox.
+          type: string
+        traffic_access_token:
+          description: TrafficAccessToken is the temporary token required to access the sandbox traffic proxy.
+          type: string
+      type: object
+    handler_TemplateBuildLogsResponse:
+      properties:
+        logs:
+          description: Logs is the structured build log entry list.
+          items:
+            $ref: "#/components/schemas/service_BuildLogEntry"
+          type: array
+      type: object
+    handler_TemplateBuildStatusResponse:
+      properties:
+        build_id:
+          description: BuildID is the template build ID.
+          type: string
+        envd_version:
+          description: EnvdVersion is the envd version in the build artifact.
+          type: string
+        log_entries:
+          description: LogEntries is the structured build log entry list.
+          items:
+            $ref: "#/components/schemas/service_BuildLogEntry"
+          type: array
+        logs:
+          description: Logs is the legacy SDK-compatible text log list.
+          items:
+            type: string
+          type: array
+        status:
+          description: Status is the build status.
+          type: string
+        template_id:
+          description: TemplateID is the template ID.
+          type: string
+      type: object
+    handler_TemplateResponse:
+      properties:
+        aliases:
+          description: Aliases is the SDK-compatible template alias list.
+          items:
+            type: string
+          type: array
+        build_id:
+          description: BuildID is the latest template build ID.
+          type: string
+        build_status:
+          description: BuildStatus is the latest template build status.
+          type: string
+        cpu_count:
+          description: CPUCount is the default CPU count for the template.
+          format: int32
+          type: integer
+        created_at:
+          description: CreatedAt is the template creation time.
+          format: date-time
+          nullable: true
+          type: string
+        deletable:
+          description: Deletable indicates whether the current caller can delete the template.
+          type: boolean
+        disk_size_mb:
+          description: DiskSizeMB is the default disk size in MB.
+          format: int32
+          type: integer
+        editable:
+          description: Editable indicates whether the current caller can edit the template.
+          type: boolean
+        envd_version:
+          description: EnvdVersion is the envd version in the template build artifact.
+          type: string
+        memory_mb:
+          description: MemoryMB is the default memory size in MB.
+          format: int32
+          type: integer
+        names:
+          description: Names is the template name list used by the console.
+          items:
+            type: string
+          type: array
+        public:
+          description: Public indicates whether the template is publicly visible.
+          type: boolean
+        source:
+          description: "Source identifies the template source: user template or platform default template."
+          type: string
+        template_id:
+          description: TemplateID is the template ID.
+          type: string
+        updated_at:
+          description: UpdatedAt is the latest template update time.
+          format: date-time
+          nullable: true
+          type: string
+      type: object
+    handler_UpdateTemplateResponse:
+      properties:
+        names:
+          description: Names returns the updated template name list.
+          items:
+            type: string
+          type: array
+      type: object
+    handler_grantRequest:
+      properties:
+        actions:
+          items:
+            type: string
+          type: array
+        service:
+          type: string
+      type: object
+    service_BuildLogEntry:
+      properties:
+        level:
+          type: string
+        message:
+          type: string
+        source:
+          type: string
+        timestamp:
+          type: string
+      type: object
+    service_SandboxLogEntry:
+      properties:
+        fields:
+          additionalProperties:
+            type: string
+          type: object
+        level:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+      type: object
+info:
+  title: AoneSuite Infra API
+  version: 0.0.0
+openapi: 3.0.3
+paths:
+  /api/v1/account/api-keys:
+    get:
+      description: APIKeyListAccount 分页列出当前用户默认组织下可见的 API Keys。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyListAccount
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          format: int32
+          type: integer
+      - in: query
+        name: cursor
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyListAccount 分页列出当前用户默认组织下可见的 API Keys。
+      x-public: false
+  /api/v1/auth/login:
+    post:
+      description: AuthLogin 处理密码登录请求，成功后写入会话 Cookie。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthLogin
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthLogin 处理密码登录请求，成功后写入会话 Cookie。
+      x-public: false
+  /api/v1/auth/logout:
+    post:
+      description: AuthLogout 处理登出请求：吊销服务端会话并清除浏览器侧 Cookie。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthLogout
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthLogout 处理登出请求：吊销服务端会话并清除浏览器侧 Cookie。
+      x-public: false
+  /api/v1/auth/me:
+    get:
+      description: AuthMe 返回当前会话对应的用户信息。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthMe
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthMe 返回当前会话对应的用户信息。
+      x-public: false
+  /api/v1/auth/oauth/{provider}/callback:
+    get:
+      description: AuthOAuthCallback 处理 OAuth 回调：校验 state 后用授权码换取用户资料并建立会话。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthOAuthCallback
+      parameters:
+      - in: path
+        name: provider
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthOAuthCallback 处理 OAuth 回调：校验 state 后用授权码换取用户资料并建立会话。
+      x-public: false
+  /api/v1/auth/oauth/{provider}/start:
+    get:
+      description: AuthOAuthStart 发起 OAuth 登录流程：生成 state、写入 Cookie 并重定向到提供方。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthOAuthStart
+      parameters:
+      - in: path
+        name: provider
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthOAuthStart 发起 OAuth 登录流程：生成 state、写入 Cookie 并重定向到提供方。
+      x-public: false
+  /api/v1/auth/register:
+    post:
+      description: AuthRegister 处理注册请求并触发邮箱验证邮件发送。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthRegister
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthRegister 处理注册请求并触发邮箱验证邮件发送。
+      x-public: false
+  /api/v1/auth/resend-verification:
+    post:
+      description: |-
+        AuthResendVerification 处理重发验证邮件的请求。
+        为防止账号枚举，无论账号是否存在都返回相同的提示信息。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthResendVerification
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: |-
+        AuthResendVerification 处理重发验证邮件的请求。
+        为防止账号枚举，无论账号是否存在都返回相同的提示信息。
+      x-public: false
+  /api/v1/auth/verify-email:
+    get:
+      description: AuthVerifyEmail 处理邮箱验证回调链接。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthVerifyEmail
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: AuthVerifyEmail 处理邮箱验证回调链接。
+      x-public: false
+  /api/v1/projects/{project_id}/api-keys:
+    get:
+      description: APIKeyList 分页列出 API Key。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyList
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          format: int32
+          type: integer
+      - in: query
+        name: cursor
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyList 分页列出 API Key。
+      x-public: false
+    post:
+      description: APIKeyCreate 创建 API Key。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyCreate
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                client_ip_allowlist:
+                  items:
+                    type: string
+                  type: array
+                expires_at:
+                  format: date-time
+                  nullable: true
+                  type: string
+                grants:
+                  items:
+                    $ref: "#/components/schemas/handler_grantRequest"
+                  type: array
+                name:
+                  type: string
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyCreate 创建 API Key。
+      x-public: false
+  /api/v1/projects/{project_id}/api-keys/{id}:
+    get:
+      description: APIKeyGet 查看单个 API Key 详情。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyGet
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyGet 查看单个 API Key 详情。
+      x-public: false
+    patch:
+      description: APIKeyUpdate 修改 API Key 的 name / expires_at / grants。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyUpdate
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                client_ip_allowlist:
+                  items:
+                    type: string
+                  type: array
+                expires_at:
+                  format: date-time
+                  nullable: true
+                  type: string
+                grants:
+                  items:
+                    $ref: "#/components/schemas/handler_grantRequest"
+                  type: array
+                name:
+                  type: string
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyUpdate 修改 API Key 的 name / expires_at / grants。
+  /api/v1/projects/{project_id}/api-keys/{id}/revoke:
+    post:
+      description: APIKeyRevoke 吊销 API Key。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyRevoke
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyRevoke 吊销 API Key。
+      x-public: false
+  /api/v1/projects/{project_id}/api-keys/{id}/rotate:
+    post:
+      description: APIKeyRotate 轮换 API Key。
+      operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyRotate
+      parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                old_key_expires_in:
+                  type: string
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: APIKeyRotate 轮换 API Key。
+      x-public: false
+  /api/v1/sandbox/sandboxes:
+    get:
+      description: ConsoleListSandboxes handles the console sandbox list; unlike `/api/v1/sbx`, it does not require an API key.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ConsoleListSandboxes
+      parameters:
+      - in: query
+        name: project_id
+        schema:
+          description: ProjectID filters console resources by project; empty means no project filter.
+          type: string
+      - in: query
+        name: api_key_id
+        schema:
+          description: APIKeyID filters console resources by the API key that created them; empty means no API key filter.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_SandboxDetailResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ConsoleListSandboxes handles the console sandbox list; unlike `/api/v1/sbx`, it does not require an API key.
+      x-public: false
+  /api/v1/sandbox/templates:
+    get:
+      description: ConsoleListTemplates handles the console template list; unlike `/api/v1/sbx`, it does not require an API key.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ConsoleListTemplates
+      parameters:
+      - in: query
+        name: project_id
+        schema:
+          description: ProjectID filters console resources by project; empty means no project filter.
+          type: string
+      - in: query
+        name: api_key_id
+        schema:
+          description: APIKeyID filters console resources by the API key that created them; empty means no API key filter.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_TemplateResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ConsoleListTemplates handles the console template list; unlike `/api/v1/sbx`, it does not require an API key.
+      x-public: false
+  /api/v1/sbx/sandboxes:
+    get:
+      description: ListSandboxes handles `GET /api/v1/sbx/sandboxes`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ListSandboxes
+      parameters:
+      - in: query
+        name: api_key_id
+        schema:
+          description: APIKeyID filters by the API key that created the resource; empty means no API key filter.
+          type: string
+      - in: query
+        name: template_id
+        schema:
+          description: TemplateID filters sandbox instances by template ID.
+          type: string
+      - in: query
+        name: state
+        schema:
+          description: State filters sandbox instances by a comma-separated list of states.
+          type: string
+      - in: query
+        name: cursor
+        schema:
+          description: Cursor is the pagination cursor.
+          type: string
+      - in: query
+        name: limit
+        schema:
+          description: Limit is the maximum number of items to return.
+          format: int32
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_SandboxDetailResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ListSandboxes handles `GET /api/v1/sbx/sandboxes`.
+    post:
+      description: CreateSandbox handles `POST /api/v1/sbx/sandboxes`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_CreateSandbox
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                allow_internet_access:
+                  description: AllowInternetAccess controls public internet access; nil uses the provider default.
+                  type: boolean
+                env_vars:
+                  additionalProperties:
+                    type: string
+                  description: EnvVars stores environment variables injected when creating the sandbox.
+                  type: object
+                metadata:
+                  additionalProperties:
+                    type: string
+                  description: Metadata stores caller-provided sandbox metadata.
+                  type: object
+                network:
+                  $ref: "#/components/schemas/handler_SandboxNetworkRouteConfig"
+                secure:
+                  description: Secure controls whether provider-specific secure isolation is enabled.
+                  type: boolean
+                template_id:
+                  description: TemplateID selects the template used to create the sandbox.
+                  type: string
+                timeout:
+                  description: Timeout sets the sandbox lifetime in seconds; 0 uses the provider default.
+                  format: int32
+                  type: integer
+              type: object
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_SandboxResponse"
+          description: Created
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: CreateSandbox handles `POST /api/v1/sbx/sandboxes`.
+  /api/v1/sbx/sandboxes/{sandbox_id}:
+    delete:
+      description: DeleteSandbox handles `DELETE /api/v1/sbx/sandboxes/{sandbox_id}`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_DeleteSandbox
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: DeleteSandbox handles `DELETE /api/v1/sbx/sandboxes/{sandbox_id}`.
+    get:
+      description: GetSandbox handles `GET /api/v1/sbx/sandboxes/{sandbox_id}`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetSandbox
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_SandboxDetailResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetSandbox handles `GET /api/v1/sbx/sandboxes/{sandbox_id}`.
+  /api/v1/sbx/sandboxes/{sandbox_id}/connect:
+    post:
+      description: ConnectSandbox handles `POST /api/v1/sbx/sandboxes/{sandbox_id}/connect`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ConnectSandbox
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                timeout:
+                  description: Timeout sets the sandbox lifetime in seconds after connecting; negative values are treated as 0.
+                  format: int32
+                  type: integer
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_SandboxResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ConnectSandbox handles `POST /api/v1/sbx/sandboxes/{sandbox_id}/connect`.
+  /api/v1/sbx/sandboxes/{sandbox_id}/logs:
+    get:
+      description: GetSandboxLogs handles `GET /api/v1/sbx/sandboxes/{sandbox_id}/logs`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetSandboxLogs
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      - in: query
+        name: cursor
+        schema:
+          description: Cursor is the provider log cursor.
+          format: int64
+          type: integer
+      - in: query
+        name: direction
+        schema:
+          description: Direction controls log pagination direction.
+          type: string
+      - in: query
+        name: level
+        schema:
+          description: Level filters logs by severity level.
+          type: string
+      - in: query
+        name: limit
+        schema:
+          description: Limit is the maximum number of items to return.
+          format: int32
+          type: integer
+      - in: query
+        name: search
+        schema:
+          description: Search filters logs by content keyword.
+          type: string
+      - in: query
+        name: start
+        schema:
+          description: Start specifies the log query start time or provider start cursor.
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_SandboxLogsResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetSandboxLogs handles `GET /api/v1/sbx/sandboxes/{sandbox_id}/logs`.
+  /api/v1/sbx/sandboxes/{sandbox_id}/metrics:
+    get:
+      description: GetSandboxMetrics handles `GET /api/v1/sbx/sandboxes/{sandbox_id}/metrics`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetSandboxMetrics
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      - in: query
+        name: start
+        schema:
+          description: Start is the metrics query start Unix timestamp.
+          format: int64
+          type: integer
+      - in: query
+        name: end
+        schema:
+          description: End is the metrics query end Unix timestamp.
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_SandboxMetricResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetSandboxMetrics handles `GET /api/v1/sbx/sandboxes/{sandbox_id}/metrics`.
+  /api/v1/sbx/sandboxes/{sandbox_id}/timeout:
+    post:
+      description: SetSandboxTimeout handles `POST /api/v1/sbx/sandboxes/{sandbox_id}/timeout`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_SetSandboxTimeout
+      parameters:
+      - in: path
+        name: sandbox_id
+        required: true
+        schema:
+          description: SandboxID is bound from the `:sandbox_id` route parameter.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                timeout:
+                  description: Timeout sets the new sandbox lifetime in seconds; negative values are treated as 0.
+                  format: int32
+                  type: integer
+              type: object
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: SetSandboxTimeout handles `POST /api/v1/sbx/sandboxes/{sandbox_id}/timeout`.
+  /api/v1/sbx/templates:
+    get:
+      description: ListTemplates handles `GET /api/v1/sbx/templates`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ListTemplates
+      parameters:
+      - in: query
+        name: api_key_id
+        schema:
+          description: APIKeyID filters by the API key that created the resource; empty means no API key filter.
+          type: string
+      - in: query
+        name: name
+        schema:
+          description: Name filters by template name.
+          type: string
+      - in: query
+        name: build_status
+        schema:
+          description: BuildStatus filters by latest build status.
+          type: string
+      - in: query
+        name: public
+        schema:
+          description: Public filters by visibility; empty means no visibility filter.
+          type: string
+      - in: query
+        name: cursor
+        schema:
+          description: Cursor is the pagination cursor.
+          type: string
+      - in: query
+        name: limit
+        schema:
+          description: Limit is the maximum number of items to return.
+          format: int32
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_TemplateResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ListTemplates handles `GET /api/v1/sbx/templates`.
+    post:
+      description: CreateTemplate handles `POST /api/v1/sbx/templates`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_CreateTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                alias:
+                  description: Alias is the SDK-compatible template alias.
+                  type: string
+                cpu_count:
+                  description: CPUCount is the default CPU count for the template.
+                  format: int32
+                  type: integer
+                disk_size_mb:
+                  description: DiskSizeMB is the default disk size in MB.
+                  format: int32
+                  type: integer
+                dockerfile:
+                  description: Dockerfile is the Dockerfile content used to build the template.
+                  type: string
+                memory_mb:
+                  description: MemoryMB is the default memory size in MB.
+                  format: int32
+                  type: integer
+                name:
+                  description: Name is the template name; empty falls back to Alias.
+                  type: string
+                public:
+                  description: Public indicates whether the template is publicly visible.
+                  type: boolean
+                ready_cmd:
+                  description: ReadyCmd is the sandbox readiness check command.
+                  type: string
+                start_cmd:
+                  description: StartCmd is the command executed after the sandbox starts.
+                  type: string
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_TemplateResponse"
+          description: Accepted
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: CreateTemplate handles `POST /api/v1/sbx/templates`.
+  /api/v1/sbx/templates/default-templates:
+    get:
+      description: ListDefaultTemplates handles public `GET /api/v1/sbx/templates/default-templates`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ListDefaultTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/handler_TemplateResponse"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ListDefaultTemplates handles public `GET /api/v1/sbx/templates/default-templates`.
+  /api/v1/sbx/templates/{template_id}:
+    delete:
+      description: DeleteTemplate handles `DELETE /api/v1/sbx/templates/{template_id}`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_DeleteTemplate
+      parameters:
+      - in: path
+        name: template_id
+        required: true
+        schema:
+          description: TemplateID is bound from the `:template_id` route parameter.
+          type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: DeleteTemplate handles `DELETE /api/v1/sbx/templates/{template_id}`.
+    get:
+      description: GetTemplate handles `GET /api/v1/sbx/templates/{template_id}`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetTemplate
+      parameters:
+      - in: path
+        name: template_id
+        required: true
+        schema:
+          description: TemplateID is bound from the `:template_id` route parameter.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_TemplateResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetTemplate handles `GET /api/v1/sbx/templates/{template_id}`.
+    patch:
+      description: UpdateTemplate handles `PATCH /api/v1/sbx/templates/{template_id}`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_UpdateTemplate
+      parameters:
+      - in: path
+        name: template_id
+        required: true
+        schema:
+          description: TemplateID is bound from the `:template_id` route parameter.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                public:
+                  description: Public updates template visibility; nil means no change.
+                  type: boolean
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_UpdateTemplateResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: UpdateTemplate handles `PATCH /api/v1/sbx/templates/{template_id}`.
+  /api/v1/sbx/templates/{template_id}/builds/{build_id}/logs:
+    get:
+      description: GetTemplateBuildLogs handles `GET /api/v1/sbx/templates/{template_id}/builds/{build_id}/logs`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetTemplateBuildLogs
+      parameters:
+      - in: path
+        name: template_id
+        required: true
+        schema:
+          description: TemplateID is bound from the `:template_id` route parameter.
+          type: string
+      - in: path
+        name: build_id
+        required: true
+        schema:
+          description: BuildID is bound from the `:build_id` route parameter.
+          type: string
+      - in: query
+        name: cursor
+        schema:
+          description: Cursor is the provider log cursor.
+          format: int64
+          type: integer
+      - in: query
+        name: limit
+        schema:
+          description: Limit is the maximum number of items to return.
+          format: int32
+          type: integer
+      - in: query
+        name: direction
+        schema:
+          description: Direction controls log pagination direction.
+          type: string
+      - in: query
+        name: level
+        schema:
+          description: Level filters logs by severity level.
+          type: string
+      - in: query
+        name: source
+        schema:
+          description: Source filters logs by build log source.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_TemplateBuildLogsResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetTemplateBuildLogs handles `GET /api/v1/sbx/templates/{template_id}/builds/{build_id}/logs`.
+  /api/v1/sbx/templates/{template_id}/builds/{build_id}/status:
+    get:
+      description: GetTemplateBuildStatus handles `GET /api/v1/sbx/templates/{template_id}/builds/{build_id}/status`.
+      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_GetTemplateBuildStatus
+      parameters:
+      - in: path
+        name: template_id
+        required: true
+        schema:
+          description: TemplateID is bound from the `:template_id` route parameter.
+          type: string
+      - in: path
+        name: build_id
+        required: true
+        schema:
+          description: BuildID is bound from the `:build_id` route parameter.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_TemplateBuildStatusResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: GetTemplateBuildStatus handles `GET /api/v1/sbx/templates/{template_id}/builds/{build_id}/status`.
+  /health:
+    get:
+      description: NewEngine builds the aone HTTP engine and registers all gateway routes.
+      operationId: github_com_aonesuite_infra_internal_aone_NewEngine
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: OK
+      summary: NewEngine builds the aone HTTP engine and registers all gateway routes.
