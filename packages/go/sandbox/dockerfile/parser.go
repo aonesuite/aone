@@ -414,7 +414,7 @@ func ParseCommand(rest string) string {
 	if inner, ok := strings.CutPrefix(rest, "["); ok {
 		inner = strings.TrimSuffix(strings.TrimSpace(inner), "]")
 		var parts []string
-		for item := range strings.SplitSeq(inner, ",") {
+		for _, item := range strings.Split(inner, ",") {
 			item = strings.TrimSpace(item)
 			item = strings.Trim(item, "\"'")
 			if item != "" {

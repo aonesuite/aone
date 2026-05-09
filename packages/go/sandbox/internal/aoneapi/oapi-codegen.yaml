@@ -1,5 +1,5 @@
 package: aoneapi
-output: internal/aoneapi/aone.gen.go
+output: packages/go/sandbox/internal/aoneapi/aone.gen.go
 generate:
   models: true
   client: true

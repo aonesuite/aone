@@ -3,20 +3,19 @@ module github.com/aonesuite/aone
 go 1.26.2
 
 require (
-	connectrpc.com/connect v1.18.1
 	github.com/BurntSushi/toml v1.6.0
+	github.com/aonesuite/aone/packages/go/sandbox v0.0.0
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
 	github.com/muesli/termenv v0.16.0
-	github.com/oapi-codegen/runtime v1.1.2
 	github.com/spf13/cobra v1.10.2
 	github.com/subosito/gotenv v1.6.0
 	golang.org/x/term v0.42.0
-	google.golang.org/protobuf v1.36.6
 )
 
 require (
+	connectrpc.com/connect v1.18.1 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -42,6 +41,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/oapi-codegen/runtime v1.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
@@ -51,4 +51,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+replace github.com/aonesuite/aone/packages/go/sandbox => ./packages/go/sandbox

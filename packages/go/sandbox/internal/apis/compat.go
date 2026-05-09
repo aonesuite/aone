@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aonesuite/aone/internal/aoneapi"
+	"github.com/aonesuite/aone/packages/go/sandbox/internal/aoneapi"
 )
 
 type ClientOption = aoneapi.ClientOption

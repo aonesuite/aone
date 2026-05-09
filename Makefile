@@ -28,26 +28,30 @@ fmt:
 
 test:
 	go test -failfast -count=1 -v -timeout 30m ./...
+	cd packages/go/sandbox && go test -failfast -count=1 -v -timeout 30m ./...
 
 unittest:
 	go test -failfast -count=1 -v ./...
+	cd packages/go/sandbox && go test -failfast -count=1 -v ./...
 
 integrationtest:
 	go test -failfast -count=1 -parallel 1 -v ./...
+	cd packages/go/sandbox && go test -failfast -count=1 -parallel 1 -v ./...
 
 staticcheck:
 	staticcheck ./...
+	cd packages/go/sandbox && staticcheck ./...
 
 generate: generate-aone generate-sandbox
 
 generate-aone:
 	# Full Aone service API
-	$(OAPI_CODEGEN) --config internal/aoneapi/oapi-codegen.yaml \
+	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/aoneapi/oapi-codegen.yaml \
 		api/openapi.yml
 
 	# Format and verify generated Aone API package
-	gofmt -w internal/aoneapi
-	go build ./internal/aoneapi
+	gofmt -w packages/go/sandbox/internal/aoneapi
+	cd packages/go/sandbox && go build ./internal/aoneapi
 
 generate-sandbox:
 	# Volume content API
@@ -63,4 +67,4 @@ generate-sandbox:
 
 	# Format and verify generated sandbox-specific packages
 	gofmt -w packages/go/sandbox/internal/volumeapi packages/go/sandbox/internal/envdapi
-	go build ./packages/go/sandbox/...
+	cd packages/go/sandbox && go build ./...
