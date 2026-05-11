@@ -18,6 +18,14 @@ components:
       - code
       - error
       type: object
+    handler_ListVoicesResponse:
+      properties:
+        voices:
+          description: Voices is the list of available TTS voices.
+          items:
+            $ref: "#/components/schemas/handler_VoiceResponse"
+          type: array
+      type: object
     handler_SandboxDetailResponse:
       properties:
         api_key_id:
@@ -142,6 +150,16 @@ components:
           description: TrafficAccessToken is the temporary token required to access the sandbox traffic proxy.
           type: string
       type: object
+    handler_SynthesizeResponse:
+      properties:
+        audio_url:
+          description: AudioURL is a URL containing synthesized audio.
+          type: string
+        duration_ms:
+          description: DurationMS is the optional audio duration in milliseconds.
+          format: int32
+          type: integer
+      type: object
     handler_TemplateBuildLogsResponse:
       properties:
         logs:
@@ -242,6 +260,24 @@ components:
             type: string
           type: array
       type: object
+    handler_VoiceResponse:
+      properties:
+        gender:
+          description: Gender is the provider-declared voice gender when available.
+          type: string
+        id:
+          description: ID is the provider voice identifier used as the request `voice`.
+          type: string
+        language:
+          description: Language is the primary voice language.
+          type: string
+        name:
+          description: Name is the human-readable voice name.
+          type: string
+        scenario:
+          description: Scenario describes the voice use case or style when available.
+          type: string
+      type: object
     handler_grantRequest:
       properties:
         actions:
@@ -282,7 +318,7 @@ openapi: 3.0.3
 paths:
   /api/v1/account/api-keys:
     get:
-      description: APIKeyListAccount 分页列出当前用户默认组织下可见的 API Keys。
+      description: APIKeyListAccount lists API keys visible in the current user's default organization.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyListAccount
       parameters:
       - in: query
@@ -302,11 +338,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyListAccount 分页列出当前用户默认组织下可见的 API Keys。
+      summary: APIKeyListAccount lists API keys visible in the current user's default organization.
       x-public: false
   /api/v1/auth/login:
     post:
-      description: AuthLogin 处理密码登录请求，成功后写入会话 Cookie。
+      description: AuthLogin authenticates an email/password login and sets the session cookie.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthLogin
       responses:
         "200":
@@ -316,11 +352,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthLogin 处理密码登录请求，成功后写入会话 Cookie。
+      summary: AuthLogin authenticates an email/password login and sets the session cookie.
       x-public: false
   /api/v1/auth/logout:
     post:
-      description: AuthLogout 处理登出请求：吊销服务端会话并清除浏览器侧 Cookie。
+      description: AuthLogout revokes the server-side session and clears the browser cookie.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthLogout
       responses:
         "200":
@@ -330,11 +366,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthLogout 处理登出请求：吊销服务端会话并清除浏览器侧 Cookie。
+      summary: AuthLogout revokes the server-side session and clears the browser cookie.
       x-public: false
   /api/v1/auth/me:
     get:
-      description: AuthMe 返回当前会话对应的用户信息。
+      description: AuthMe returns the user profile for the current session.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthMe
       responses:
         "200":
@@ -344,11 +380,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthMe 返回当前会话对应的用户信息。
+      summary: AuthMe returns the user profile for the current session.
       x-public: false
   /api/v1/auth/oauth/{provider}/callback:
     get:
-      description: AuthOAuthCallback 处理 OAuth 回调：校验 state 后用授权码换取用户资料并建立会话。
+      description: AuthOAuthCallback validates OAuth state, exchanges the authorization code, and creates a session.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthOAuthCallback
       parameters:
       - in: path
@@ -364,11 +400,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthOAuthCallback 处理 OAuth 回调：校验 state 后用授权码换取用户资料并建立会话。
+      summary: AuthOAuthCallback validates OAuth state, exchanges the authorization code, and creates a session.
       x-public: false
   /api/v1/auth/oauth/{provider}/start:
     get:
-      description: AuthOAuthStart 发起 OAuth 登录流程：生成 state、写入 Cookie 并重定向到提供方。
+      description: AuthOAuthStart starts an OAuth login by creating state, setting a cookie, and redirecting to the provider.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthOAuthStart
       parameters:
       - in: path
@@ -384,11 +420,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthOAuthStart 发起 OAuth 登录流程：生成 state、写入 Cookie 并重定向到提供方。
+      summary: AuthOAuthStart starts an OAuth login by creating state, setting a cookie, and redirecting to the provider.
       x-public: false
   /api/v1/auth/register:
     post:
-      description: AuthRegister 处理注册请求并触发邮箱验证邮件发送。
+      description: AuthRegister creates a pending user account and sends a verification email.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthRegister
       responses:
         "200":
@@ -398,13 +434,13 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthRegister 处理注册请求并触发邮箱验证邮件发送。
+      summary: AuthRegister creates a pending user account and sends a verification email.
       x-public: false
   /api/v1/auth/resend-verification:
     post:
       description: |-
-        AuthResendVerification 处理重发验证邮件的请求。
-        为防止账号枚举，无论账号是否存在都返回相同的提示信息。
+        AuthResendVerification resends an email verification message when needed.
+        It returns the same response whether the account exists to avoid account enumeration.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthResendVerification
       responses:
         "200":
@@ -415,12 +451,12 @@ paths:
                 type: object
           description: OK
       summary: |-
-        AuthResendVerification 处理重发验证邮件的请求。
-        为防止账号枚举，无论账号是否存在都返回相同的提示信息。
+        AuthResendVerification resends an email verification message when needed.
+        It returns the same response whether the account exists to avoid account enumeration.
       x-public: false
   /api/v1/auth/verify-email:
     get:
-      description: AuthVerifyEmail 处理邮箱验证回调链接。
+      description: AuthVerifyEmail consumes an email verification token and activates the account.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_AuthVerifyEmail
       responses:
         "200":
@@ -430,11 +466,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: AuthVerifyEmail 处理邮箱验证回调链接。
+      summary: AuthVerifyEmail consumes an email verification token and activates the account.
       x-public: false
   /api/v1/projects/{project_id}/api-keys:
     get:
-      description: APIKeyList 分页列出 API Key。
+      description: APIKeyList lists API keys in a project.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyList
       parameters:
       - in: path
@@ -459,10 +495,10 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyList 分页列出 API Key。
+      summary: APIKeyList lists API keys in a project.
       x-public: false
     post:
-      description: APIKeyCreate 创建 API Key。
+      description: APIKeyCreate creates an API key and returns its one-time secret.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyCreate
       parameters:
       - in: path
@@ -498,11 +534,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyCreate 创建 API Key。
+      summary: APIKeyCreate creates an API key and returns its one-time secret.
       x-public: false
   /api/v1/projects/{project_id}/api-keys/{id}:
     get:
-      description: APIKeyGet 查看单个 API Key 详情。
+      description: APIKeyGet returns details for a single API key.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyGet
       parameters:
       - in: path
@@ -523,10 +559,10 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyGet 查看单个 API Key 详情。
+      summary: APIKeyGet returns details for a single API key.
       x-public: false
     patch:
-      description: APIKeyUpdate 修改 API Key 的 name / expires_at / grants。
+      description: APIKeyUpdate updates an API key's name, expiration, allowlist, or grants.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyUpdate
       parameters:
       - in: path
@@ -567,10 +603,10 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyUpdate 修改 API Key 的 name / expires_at / grants。
+      summary: APIKeyUpdate updates an API key's name, expiration, allowlist, or grants.
   /api/v1/projects/{project_id}/api-keys/{id}/revoke:
     post:
-      description: APIKeyRevoke 吊销 API Key。
+      description: APIKeyRevoke revokes an API key.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyRevoke
       parameters:
       - in: path
@@ -591,11 +627,11 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyRevoke 吊销 API Key。
+      summary: APIKeyRevoke revokes an API key.
       x-public: false
   /api/v1/projects/{project_id}/api-keys/{id}/rotate:
     post:
-      description: APIKeyRotate 轮换 API Key。
+      description: APIKeyRotate rotates an API key and returns the new one-time secret.
       operationId: github_com_aonesuite_infra_internal_aone_account_handler_(_Handler)_APIKeyRotate
       parameters:
       - in: path
@@ -624,63 +660,7 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
-      summary: APIKeyRotate 轮换 API Key。
-      x-public: false
-  /api/v1/sandbox/sandboxes:
-    get:
-      description: ConsoleListSandboxes handles the console sandbox list; unlike `/api/v1/sbx`, it does not require an API key.
-      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ConsoleListSandboxes
-      parameters:
-      - in: query
-        name: project_id
-        schema:
-          description: ProjectID filters console resources by project; empty means no project filter.
-          type: string
-      - in: query
-        name: api_key_id
-        schema:
-          description: APIKeyID filters console resources by the API key that created them; empty means no API key filter.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/handler_SandboxDetailResponse"
-                type: array
-          description: OK
-        default:
-          $ref: "#/components/responses/HTTPError"
-      summary: ConsoleListSandboxes handles the console sandbox list; unlike `/api/v1/sbx`, it does not require an API key.
-      x-public: false
-  /api/v1/sandbox/templates:
-    get:
-      description: ConsoleListTemplates handles the console template list; unlike `/api/v1/sbx`, it does not require an API key.
-      operationId: github_com_aonesuite_infra_internal_products_sandbox_handler_(_Module)_ConsoleListTemplates
-      parameters:
-      - in: query
-        name: project_id
-        schema:
-          description: ProjectID filters console resources by project; empty means no project filter.
-          type: string
-      - in: query
-        name: api_key_id
-        schema:
-          description: APIKeyID filters console resources by the API key that created them; empty means no API key filter.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/handler_TemplateResponse"
-                type: array
-          description: OK
-        default:
-          $ref: "#/components/responses/HTTPError"
-      summary: ConsoleListTemplates handles the console template list; unlike `/api/v1/sbx`, it does not require an API key.
+      summary: APIKeyRotate rotates an API key and returns the new one-time secret.
       x-public: false
   /api/v1/sbx/sandboxes:
     get:
@@ -1213,6 +1193,56 @@ paths:
         default:
           $ref: "#/components/responses/HTTPError"
       summary: GetTemplateBuildStatus handles `GET /api/v1/sbx/templates/{template_id}/builds/{build_id}/status`.
+  /api/v1/tts/speech:
+    post:
+      description: Synthesize handles `POST /api/v1/tts/speech`.
+      operationId: github_com_aonesuite_infra_internal_products_tts_handler_(_Module)_Synthesize
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                format:
+                  description: Format selects the requested audio format, such as mp3.
+                  type: string
+                speed:
+                  description: Speed controls relative speech speed where 1.0 is provider default.
+                  type: number
+                text:
+                  description: Text is the source text to synthesize.
+                  type: string
+                voice:
+                  description: Voice is the provider voice identifier to synthesize with.
+                  type: string
+              required:
+              - text
+              - voice
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_SynthesizeResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: Synthesize handles `POST /api/v1/tts/speech`.
+  /api/v1/tts/voices:
+    get:
+      description: ListVoices handles `GET /api/v1/tts/voices`.
+      operationId: github_com_aonesuite_infra_internal_products_tts_handler_(_Module)_ListVoices
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/handler_ListVoicesResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/HTTPError"
+      summary: ListVoices handles `GET /api/v1/tts/voices`.
   /health:
     get:
       description: NewEngine builds the aone HTTP engine and registers all gateway routes.
