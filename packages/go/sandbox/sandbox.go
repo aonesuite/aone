@@ -2,11 +2,8 @@ package sandbox
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -105,11 +102,7 @@ func (s *Sandbox) processClient() processconnect.ProcessClient {
 // reaches StateRunning.
 func (c *Client) Create(ctx context.Context, params CreateParams) (*Sandbox, error) {
 	if params.TemplateID == "" {
-		if params.MCP != nil {
-			params.TemplateID = DefaultMCPTemplate
-		} else {
-			params.TemplateID = DefaultTemplate
-		}
+		params.TemplateID = DefaultTemplate
 	}
 	body, err := params.toAPI()
 	if err != nil {
@@ -126,26 +119,6 @@ func (c *Client) Create(ctx context.Context, params CreateParams) (*Sandbox, err
 	if !sb.envdTokenLoaded {
 		if err := sb.refreshEnvdToken(ctx); err != nil {
 			return nil, fmt.Errorf("create sandbox %s: %w", sb.sandboxID, err)
-		}
-	}
-	if params.MCP != nil {
-		token, err := randomToken()
-		if err != nil {
-			return nil, fmt.Errorf("generate mcp token: %w", err)
-		}
-		sb.mcpToken = &token
-		config, err := json.Marshal(params.MCP)
-		if err != nil {
-			return nil, fmt.Errorf("marshal mcp config: %w", err)
-		}
-		res, err := sb.Commands().Run(ctx, "mcp-gateway --config "+shellQuote(string(config)), WithCommandUser("root"), WithEnvs(map[string]string{
-			"GATEWAY_ACCESS_TOKEN": token,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		if res.ExitCode != 0 {
-			return nil, fmt.Errorf("failed to start MCP gateway: %s", res.Stderr)
 		}
 	}
 	return sb, nil
@@ -583,12 +556,4 @@ func (s *Sandbox) batchUploadURL(user string) string {
 	q := url.Values{}
 	q.Set("username", user)
 	return s.envdURL() + "/files?" + q.Encode()
-}
-
-func randomToken() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b[:]), nil
 }

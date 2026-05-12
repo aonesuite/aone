@@ -40,8 +40,8 @@ const (
 	LifecycleActionPause LifecycleAction = "pause"
 )
 
-// SandboxLifecycle configures timeout behavior. It mirrors lifecycle options
-// while keeping AutoPause available for source compatibility.
+// SandboxLifecycle configures timeout behavior. OnTimeout selects whether the
+// sandbox is killed or paused at expiry; AutoResume re-arms automatic resume.
 type SandboxLifecycle struct {
 	OnTimeout  LifecycleAction
 	AutoResume *bool
@@ -57,15 +57,6 @@ type SandboxInfoLifecycle struct {
 type AutoResumeConfig struct {
 	Enabled bool `json:"enabled"`
 }
-
-// VolumeMount attaches a persistent volume to a sandbox path.
-type VolumeMount struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
-
-// MCPConfig is a raw MCP gateway configuration map.
-type MCPConfig map[string]any
 
 // SandboxState is the lifecycle state reported by the Sandbox API.
 type SandboxState string
@@ -86,10 +77,6 @@ type CreateParams struct {
 	// Timeout is the sandbox time-to-live in seconds.
 	Timeout *int32
 
-	// AutoPause controls whether the sandbox pauses instead of terminating when
-	// the timeout expires.
-	AutoPause *bool
-
 	// AllowInternetAccess controls broad outbound internet access.
 	AllowInternetAccess *bool
 
@@ -107,12 +94,6 @@ type CreateParams struct {
 
 	// Lifecycle configures whether the sandbox is killed or paused on timeout.
 	Lifecycle *SandboxLifecycle
-
-	// MCP enables MCP gateway configuration when supported by the template.
-	MCP *MCPConfig
-
-	// VolumeMounts maps sandbox mount paths to volume names.
-	VolumeMounts map[string]string
 }
 
 // ConnectParams controls how an existing sandbox connection is established.
@@ -222,8 +203,6 @@ type SandboxInfo struct {
 	Network *NetworkConfig
 	// Lifecycle is the timeout behavior when provided.
 	Lifecycle *SandboxInfoLifecycle
-	// VolumeMounts lists persistent volumes mounted in the sandbox.
-	VolumeMounts []VolumeMount
 }
 
 // ListedSandbox is the compact sandbox representation returned by list calls.
@@ -239,9 +218,8 @@ type ListedSandbox struct {
 	EnvdVersion  string
 	StartedAt    time.Time
 	EndAt        time.Time
-	Metadata     *Metadata
-	Name         *string
-	VolumeMounts []VolumeMount
+	Metadata *Metadata
+	Name     *string
 }
 
 // SandboxMetric is a single resource-usage sample for a sandbox.

@@ -69,7 +69,7 @@ type Volume struct {
 // CreateVolume creates a new persistent volume.
 func (c *Client) CreateVolume(ctx context.Context, name string) (*Volume, error) {
 	var out apis.VolumeAndToken
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodPost, "/volumes", map[string]string{"name": name}, &out)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodPost, "/api/v1/sbx/volumes", map[string]string{"name": name}, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (c *Client) ConnectVolume(ctx context.Context, volumeID string) (*Volume, e
 // GetVolumeInfo fetches volume metadata and content token.
 func (c *Client) GetVolumeInfo(ctx context.Context, volumeID string) (*Volume, error) {
 	var out apis.VolumeAndToken
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/volumes/"+url.PathEscape(volumeID), nil, &out)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/api/v1/sbx/volumes/"+url.PathEscape(volumeID), nil, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (c *Client) GetVolumeInfo(ctx context.Context, volumeID string) (*Volume, e
 // ListVolumes lists persistent volumes.
 func (c *Client) ListVolumes(ctx context.Context) ([]VolumeInfo, error) {
 	var out []VolumeInfo
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/volumes", nil, &out)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, "/api/v1/sbx/volumes", nil, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (c *Client) ListVolumes(ctx context.Context) ([]VolumeInfo, error) {
 
 // DestroyVolume destroys a volume. It returns false when the volume is missing.
 func (c *Client) DestroyVolume(ctx context.Context, volumeID string) (bool, error) {
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, "/volumes/"+url.PathEscape(volumeID), nil, nil)
+	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, "/api/v1/sbx/volumes/"+url.PathEscape(volumeID), nil, nil)
 	if err != nil {
 		return false, err
 	}

@@ -24,6 +24,12 @@ type HTTPError struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// HandlerListVoicesResponse defines model for handler_ListVoicesResponse.
+type HandlerListVoicesResponse struct {
+	// Voices Voices is the list of available TTS voices.
+	Voices *[]HandlerVoiceResponse `json:"voices,omitempty"`
+}
+
 // HandlerSandboxDetailResponse defines model for handler_SandboxDetailResponse.
 type HandlerSandboxDetailResponse struct {
 	// APIKeyID APIKeyID is the ID of the API key that created the sandbox.
@@ -129,6 +135,15 @@ type HandlerSandboxResponse struct {
 	TrafficAccessToken *string `json:"traffic_access_token,omitempty"`
 }
 
+// HandlerSynthesizeResponse defines model for handler_SynthesizeResponse.
+type HandlerSynthesizeResponse struct {
+	// AudioURL AudioURL is a URL containing synthesized audio.
+	AudioURL *string `json:"audio_url,omitempty"`
+
+	// DurationMs DurationMS is the optional audio duration in milliseconds.
+	DurationMs *int32 `json:"duration_ms,omitempty"`
+}
+
 // HandlerTemplateBuildLogsResponse defines model for handler_TemplateBuildLogsResponse.
 type HandlerTemplateBuildLogsResponse struct {
 	// Logs Logs is the structured build log entry list.
@@ -210,6 +225,24 @@ type HandlerUpdateTemplateResponse struct {
 	Names *[]string `json:"names,omitempty"`
 }
 
+// HandlerVoiceResponse defines model for handler_VoiceResponse.
+type HandlerVoiceResponse struct {
+	// Gender Gender is the provider-declared voice gender when available.
+	Gender *string `json:"gender,omitempty"`
+
+	// ID ID is the provider voice identifier used as the request `voice`.
+	ID *string `json:"id,omitempty"`
+
+	// Language Language is the primary voice language.
+	Language *string `json:"language,omitempty"`
+
+	// Name Name is the human-readable voice name.
+	Name *string `json:"name,omitempty"`
+
+	// Scenario Scenario describes the voice use case or style when available.
+	Scenario *string `json:"scenario,omitempty"`
+}
+
 // HandlerGrantRequest defines model for handler_grantRequest.
 type HandlerGrantRequest struct {
 	Actions *[]string `json:"actions,omitempty"`
@@ -263,18 +296,6 @@ type GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyUpdateJSONBod
 // GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateJSONBody defines parameters for GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotate.
 type GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateJSONBody struct {
 	OldKeyExpiresIn *string `json:"old_key_expires_in,omitempty"`
-}
-
-// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams defines parameters for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes.
-type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams struct {
-	ProjectID *string `form:"project_id,omitempty" json:"project_id,omitempty"`
-	APIKeyID  *string `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
-}
-
-// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams defines parameters for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates.
-type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams struct {
-	ProjectID *string `form:"project_id,omitempty" json:"project_id,omitempty"`
-	APIKeyID  *string `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
 }
 
 // GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesParams defines parameters for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxes.
@@ -391,6 +412,21 @@ type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuild
 	Source    *string `form:"source,omitempty" json:"source,omitempty"`
 }
 
+// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONBody defines parameters for GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize.
+type GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONBody struct {
+	// Format Format selects the requested audio format, such as mp3.
+	Format *string `json:"format,omitempty"`
+
+	// Speed Speed controls relative speech speed where 1.0 is provider default.
+	Speed *float32 `json:"speed,omitempty"`
+
+	// Text Text is the source text to synthesize.
+	Text string `json:"text"`
+
+	// Voice Voice is the provider voice identifier to synthesize with.
+	Voice string `json:"voice"`
+}
+
 // GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyCreateJSONRequestBody defines body for GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyCreate for application/json ContentType.
 type GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyCreateJSONRequestBody GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyCreateJSONBody
 
@@ -414,6 +450,9 @@ type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleCreateTemplateJS
 
 // GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleUpdateTemplateJSONRequestBody defines body for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleUpdateTemplate for application/json ContentType.
 type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleUpdateTemplateJSONRequestBody GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleUpdateTemplateJSONBody
+
+// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody defines body for GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize for application/json ContentType.
+type GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONBody
 
 // Getter for additional properties for HTTPError. Returns the specified
 // element and whether it was found
@@ -618,12 +657,6 @@ type ClientInterface interface {
 
 	GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotate(ctx context.Context, projectID string, id string, body GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes request
-	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates request
-	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxes request
 	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxes(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -681,6 +714,14 @@ type ClientInterface interface {
 
 	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatus request
 	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatus(ctx context.Context, templateID string, buildID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBody request with any body
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize(ctx context.Context, body GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoices request
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoices(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GithubComAonesuiteInfraInternalAoneNewEngine request
 	GithubComAonesuiteInfraInternalAoneNewEngine(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -892,30 +933,6 @@ func (c *Client) GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyR
 
 func (c *Client) GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotate(ctx context.Context, projectID string, id string, body GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateRequest(c.Server, projectID, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1168,6 +1185,42 @@ func (c *Client) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetT
 
 func (c *Client) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatus(ctx context.Context, templateID string, buildID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatusRequest(c.Server, templateID, buildID)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize(ctx context.Context, body GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoices(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -1790,136 +1843,6 @@ func NewGithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateRequ
 	}
 
 	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesRequest generates requests for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes
-func NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesRequest(server string, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/sandbox/sandboxes")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.ProjectID != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "project_id", runtime.ParamLocationQuery, *params.ProjectID); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.APIKeyID != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.APIKeyID); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesRequest generates requests for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates
-func NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesRequest(server string, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/sandbox/templates")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.ProjectID != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "project_id", runtime.ParamLocationQuery, *params.ProjectID); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.APIKeyID != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.APIKeyID); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
 	return req, nil
 }
@@ -2926,6 +2849,73 @@ func NewGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBu
 	return req, nil
 }
 
+// NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequest calls the generic GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize builder with application/json body
+func NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequest(server string, body GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequestWithBody generates requests for GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize with any type of body
+func NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/tts/speech")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesRequest generates requests for GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoices
+func NewGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/tts/voices")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGithubComAonesuiteInfraInternalAoneNewEngineRequest generates requests for GithubComAonesuiteInfraInternalAoneNewEngine
 func NewGithubComAonesuiteInfraInternalAoneNewEngineRequest(server string) (*http.Request, error) {
 	var err error
@@ -3047,12 +3037,6 @@ type ClientWithResponsesInterface interface {
 
 	GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateWithResponse(ctx context.Context, projectID string, id string, body GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateJSONRequestBody, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateResponse, error)
 
-	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesWithResponse request
-	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesWithResponse(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse, error)
-
-	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesWithResponse request
-	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesWithResponse(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse, error)
-
 	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesWithResponse request
 	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesWithResponse(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesParams, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesResponse, error)
 
@@ -3110,6 +3094,14 @@ type ClientWithResponsesInterface interface {
 
 	// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatusWithResponse request
 	GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatusWithResponse(ctx context.Context, templateID string, buildID string, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatusResponse, error)
+
+	// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBodyWithResponse request with any body
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse, error)
+
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithResponse(ctx context.Context, body GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse, error)
+
+	// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesWithResponse request
+	GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse, error)
 
 	// GithubComAonesuiteInfraInternalAoneNewEngineWithResponse request
 	GithubComAonesuiteInfraInternalAoneNewEngineWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalAoneNewEngineResponse, error)
@@ -3439,52 +3431,6 @@ func (r GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateResp
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *[]HandlerSandboxDetailResponse
-	JSONDefault  *HTTPError
-}
-
-// Status returns HTTPResponse.Status
-func (r GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *[]HandlerTemplateResponse
-	JSONDefault  *HTTPError
-}
-
-// Status returns HTTPResponse.Status
-func (r GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3856,6 +3802,52 @@ func (r GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBu
 	return 0
 }
 
+type GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *HandlerSynthesizeResponse
+	JSONDefault  *HTTPError
+}
+
+// Status returns HTTPResponse.Status
+func (r GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *HandlerListVoicesResponse
+	JSONDefault  *HTTPError
+}
+
+// Status returns HTTPResponse.Status
+func (r GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GithubComAonesuiteInfraInternalAoneNewEngineResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4034,24 +4026,6 @@ func (c *ClientWithResponses) GithubComAonesuiteInfraInternalAoneAccountHandlerH
 		return nil, err
 	}
 	return ParseGithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateResponse(rsp)
-}
-
-// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesWithResponse request returning *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse
-func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesWithResponse(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesParams, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse, error) {
-	rsp, err := c.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxes(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse(rsp)
-}
-
-// GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesWithResponse request returning *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse
-func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesWithResponse(ctx context.Context, params *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesParams, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse, error) {
-	rsp, err := c.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplates(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse(rsp)
 }
 
 // GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesWithResponse request returning *GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesResponse
@@ -4236,6 +4210,32 @@ func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsSandboxHand
 		return nil, err
 	}
 	return ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildStatusResponse(rsp)
+}
+
+// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBodyWithResponse request with arbitrary body returning *GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse
+func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse, error) {
+	rsp, err := c.GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse(rsp)
+}
+
+func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithResponse(ctx context.Context, body GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeJSONRequestBody, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse, error) {
+	rsp, err := c.GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesize(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse(rsp)
+}
+
+// GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesWithResponse request returning *GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse
+func (c *ClientWithResponses) GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse, error) {
+	rsp, err := c.GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoices(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse(rsp)
 }
 
 // GithubComAonesuiteInfraInternalAoneNewEngineWithResponse request returning *GithubComAonesuiteInfraInternalAoneNewEngineResponse
@@ -4631,72 +4631,6 @@ func ParseGithubComAonesuiteInfraInternalAoneAccountHandlerHandlerAPIKeyRotateRe
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse parses an HTTP response from a GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesWithResponse call
-func ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse(rsp *http.Response) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListSandboxesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []HandlerSandboxDetailResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
-		var dest HTTPError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSONDefault = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse parses an HTTP response from a GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesWithResponse call
-func ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse(rsp *http.Response) (*GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConsoleListTemplatesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []HandlerTemplateResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
-		var dest HTTPError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSONDefault = &dest
 
 	}
 
@@ -5193,6 +5127,72 @@ func ParseGithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplate
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest HandlerTemplateBuildStatusResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest HTTPError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse parses an HTTP response from a GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeWithResponse call
+func ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse(rsp *http.Response) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GithubComAonesuiteInfraInternalProductsTtsHandlerModuleSynthesizeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest HandlerSynthesizeResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest HTTPError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse parses an HTTP response from a GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesWithResponse call
+func ParseGithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse(rsp *http.Response) (*GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GithubComAonesuiteInfraInternalProductsTtsHandlerModuleListVoicesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest HandlerListVoicesResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

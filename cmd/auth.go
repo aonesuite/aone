@@ -261,8 +261,8 @@ func coalesce(values ...string) string {
 }
 
 // verifyCredentials makes a cheap call against the control plane to confirm
-// the saved key works. We use `GET /sandboxes?limit=1` because it exists on
-// every deployment and returns quickly.
+// the saved key works. We use `GET /api/v1/sbx/sandboxes?limit=1` because it
+// exists on every deployment and returns quickly.
 func verifyCredentials() error {
 	resolved, err := config.Resolver{}.Resolve()
 	if err != nil {
@@ -271,7 +271,7 @@ func verifyCredentials() error {
 	if resolved.APIKey == "" {
 		return errors.New("no API key resolved")
 	}
-	url := strings.TrimRight(resolved.Endpoint, "/") + "/sandboxes?limit=1"
+	url := strings.TrimRight(resolved.Endpoint, "/") + "/api/v1/sbx/sandboxes?limit=1"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return err

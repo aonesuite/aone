@@ -66,7 +66,7 @@ func TestCreate_HappyPath(t *testing.T) {
 	if !strings.Contains(out, "vol-test") || !strings.Contains(out, "test-volume") {
 		t.Fatalf("stdout = %q", out)
 	}
-	if !sawRequest(srv, "POST", "/volumes") {
+	if !sawRequest(srv, "POST", "/api/v1/sbx/volumes") {
 		t.Fatalf("expected POST /volumes; got %+v", srv.Requests())
 	}
 }
@@ -83,7 +83,7 @@ func TestCreate_JSONOutput(t *testing.T) {
 
 func TestCreate_APIError(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("POST", "/volumes", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("POST", "/api/v1/sbx/volumes", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = io.WriteString(w, `{"code":500,"message":"boom"}`)
 	})
@@ -107,7 +107,7 @@ func TestList_HappyPath(t *testing.T) {
 
 func TestList_EmptyTable(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("GET", "/volumes", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("GET", "/api/v1/sbx/volumes", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})
@@ -218,14 +218,14 @@ func TestDelete_YesFlagSkipsPrompt(t *testing.T) {
 	_ = captureStdout(t, func() {
 		Delete(DeleteInfo{VolumeIDs: []string{"vol-1", "vol-2"}, Yes: true})
 	})
-	if !sawRequest(srv, "DELETE", "/volumes/vol-1") || !sawRequest(srv, "DELETE", "/volumes/vol-2") {
+	if !sawRequest(srv, "DELETE", "/api/v1/sbx/volumes/vol-1") || !sawRequest(srv, "DELETE", "/api/v1/sbx/volumes/vol-2") {
 		t.Fatalf("expected DELETE for both volumes; got %+v", srv.Requests())
 	}
 }
 
 func TestDelete_NotFoundWarn(t *testing.T) {
 	srv := withMock(t)
-	srv.Handle("DELETE", "/volumes/{id}", func(w http.ResponseWriter, r *http.Request) {
+	srv.Handle("DELETE", "/api/v1/sbx/volumes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	stderr := captureStderr(t, func() {

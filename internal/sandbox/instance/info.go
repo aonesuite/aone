@@ -101,11 +101,6 @@ func renderPrettyInfo(d *sandbox.SandboxInfo) {
 	if d.Metadata != nil && len(*d.Metadata) > 0 {
 		printField("Metadata", sbClient.FormatMetadata(map[string]string(*d.Metadata)))
 	}
-	if len(d.VolumeMounts) > 0 {
-		if b, err := json.MarshalIndent(d.VolumeMounts, "  ", "  "); err == nil {
-			fmt.Printf("Volume mounts:\n  %s\n", string(b))
-		}
-	}
 	fmt.Println()
 }
 

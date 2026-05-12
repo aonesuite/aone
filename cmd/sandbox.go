@@ -50,7 +50,6 @@ func newSandboxCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&info.Detach, "detach", false, "create sandbox without connecting terminal")
 	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "metadata key=value pairs (comma-separated)")
 	cmd.Flags().StringArrayVarP(&info.EnvVars, "env-var", "e", nil, "environment variables (KEY=VALUE, can be specified multiple times)")
-	cmd.Flags().BoolVar(&info.AutoPause, "auto-pause", false, "automatically pause sandbox when timeout expires")
 	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
 	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root used to locate aone.sandbox.toml")
 	return cmd

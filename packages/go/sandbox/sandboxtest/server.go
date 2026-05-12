@@ -300,7 +300,7 @@ func (s *Server) installDefaults() {
 	}
 
 	// --- volumes -----------------------------------------------------------
-	s.routes[routeKey("POST", "/volumes")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("POST", "/api/v1/sbx/volumes")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"volumeID": "vol-test",
 			"name":     "test-volume",
@@ -308,7 +308,7 @@ func (s *Server) installDefaults() {
 		})
 	}
 
-	s.routes[routeKey("GET", "/volumes")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/volumes")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []map[string]any{{
 			"volumeID": "vol-test",
 			"name":     "test-volume",
@@ -316,15 +316,15 @@ func (s *Server) installDefaults() {
 		}})
 	}
 
-	s.routes[routeKey("GET", "/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("GET", "/api/v1/sbx/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
-			"volumeID": pathID(r.URL.Path, "/volumes/", ""),
+			"volumeID": pathID(r.URL.Path, "/api/v1/sbx/volumes/", ""),
 			"name":     "test-volume",
 			"token":    "vol-tok",
 		})
 	}
 
-	s.routes[routeKey("DELETE", "/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
+	s.routes[routeKey("DELETE", "/api/v1/sbx/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 

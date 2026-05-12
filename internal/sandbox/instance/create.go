@@ -18,7 +18,6 @@ type CreateInfo struct {
 	Metadata   string
 	Detach     bool
 	EnvVars    []string // KEY=VALUE pairs
-	AutoPause  bool
 
 	// ConfigPath optionally points at an explicit aone.sandbox.toml. When
 	// empty, the file is looked up under Path (or CWD).
@@ -70,9 +69,6 @@ func Create(info CreateInfo) {
 		if len(envMap) > 0 {
 			params.EnvVars = &envMap
 		}
-	}
-	if info.AutoPause {
-		params.AutoPause = &info.AutoPause
 	}
 
 	fmt.Printf("Creating sandbox from template %s...\n", info.TemplateID)
