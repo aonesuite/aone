@@ -34,10 +34,19 @@ components:
         client_id:
           description: ClientID identifies this platform to SDK clients.
           type: string
+        domain:
+          description: Domain is the sandbox access domain returned by the provider.
+          type: string
         end_at:
           description: EndAt is the scheduled or actual sandbox end time.
           format: date-time
           nullable: true
+          type: string
+        envd_access_token:
+          description: EnvdAccessToken is the temporary access token required to connect to envd.
+          type: string
+        envd_sandbox_id:
+          description: EnvdSandboxID is the sandbox ID used for envd and traffic proxy routing.
           type: string
         envd_version:
           description: EnvdVersion is the envd component version inside the sandbox.
@@ -55,6 +64,9 @@ components:
           type: string
         template_id:
           description: TemplateID is the template used by the sandbox.
+          type: string
+        traffic_access_token:
+          description: TrafficAccessToken is the temporary token required to access the sandbox traffic proxy.
           type: string
       type: object
     handler_SandboxLogsResponse:
@@ -136,6 +148,9 @@ components:
           type: string
         envd_access_token:
           description: EnvdAccessToken is the temporary access token required to connect to envd.
+          type: string
+        envd_sandbox_id:
+          description: EnvdSandboxID is the sandbox ID used for envd and traffic proxy routing.
           type: string
         envd_version:
           description: EnvdVersion is the envd component version inside the sandbox.

@@ -2,13 +2,16 @@ package instance
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/aonesuite/aone/internal/config"
+	"github.com/aonesuite/aone/packages/go/sandbox/sandboxtest"
 )
 
 // captureStderr redirects os.Stderr while fn runs, returning what was written.
@@ -106,6 +109,30 @@ func TestCreate_ExplicitTemplateBeatsProjectConfig(t *testing.T) {
 	}
 	if !strings.Contains(out, "API key not configured") {
 		t.Fatalf("expected API-key error; stderr = %q", out)
+	}
+}
+
+func TestCreate_DefaultsToSecureSandbox(t *testing.T) {
+	dir := isolateConfig(t)
+	srv := sandboxtest.NewServer(t)
+	t.Setenv(config.EnvConfigHome, dir)
+	t.Setenv(config.EnvAPIKey, "test-key")
+	t.Setenv(config.EnvEndpoint, srv.URL())
+
+	_ = captureStdout(t, func() {
+		Create(CreateInfo{TemplateID: "tpl-explicit", Detach: true})
+	})
+
+	requests := srv.RequestsFor(http.MethodPost, "/api/v1/sbx/sandboxes")
+	if len(requests) != 1 {
+		t.Fatalf("create requests = %+v", requests)
+	}
+	var body map[string]any
+	if err := json.Unmarshal([]byte(requests[0].Body), &body); err != nil {
+		t.Fatalf("decode create body: %v", err)
+	}
+	if body["secure"] != true {
+		t.Fatalf("secure = %#v, body = %#v", body["secure"], body)
 	}
 }
 

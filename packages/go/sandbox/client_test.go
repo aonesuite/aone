@@ -2,9 +2,12 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
 )
 
 func TestParseBoolEnv(t *testing.T) {
@@ -141,5 +144,65 @@ func TestRequestTimeoutEditorAttachesTimeout(t *testing.T) {
 	}
 	if _, ok := req.Context().Deadline(); !ok {
 		t.Fatal("expected derived deadline to be attached")
+	}
+}
+
+func TestCreateRefreshesEnvdTokenFromDetail(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/sbx/sandboxes":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"sandbox_id":   "sbx-test",
+				"template_id":  "tpl-test",
+				"client_id":    "aone",
+				"envd_version": "0.5.4",
+				"domain":       "example.test",
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/sbx/sandboxes/sbx-test":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"sandbox_id":        "sbx-test",
+				"envd_sandbox_id":   "e2b-sbx-test",
+				"template_id":       "tpl-test",
+				"client_id":         "aone",
+				"envd_version":      "0.5.4",
+				"envd_access_token": "envd-token",
+				"state":             "running",
+			})
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+	}))
+
+	sb, err := c.Create(context.Background(), CreateParams{TemplateID: "tpl-test"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	sb.envdTokenMu.RLock()
+	token := sb.envdAccessToken
+	sb.envdTokenMu.RUnlock()
+	if token == nil || *token != "envd-token" {
+		t.Fatalf("envd token = %+v", token)
+	}
+	if got, want := sb.GetHost(49983), "49983-e2b-sbx-test.example.test"; got != want {
+		t.Fatalf("envd host = %q, want %q", got, want)
+	}
+}
+
+func TestSandboxUsesEnvdSandboxIDForHosts(t *testing.T) {
+	domain := "sandbox.example.test"
+	sandboxID := "sbx-local"
+	envdSandboxID := "e2b-provider"
+	sb := newSandbox(nil, &apis.Sandbox{
+		SandboxID:     &sandboxID,
+		EnvdSandboxID: &envdSandboxID,
+		Domain:        &domain,
+	})
+	if got, want := sb.ID(), sandboxID; got != want {
+		t.Fatalf("ID = %q, want %q", got, want)
+	}
+	if got, want := sb.GetHost(49983), "49983-e2b-provider.sandbox.example.test"; got != want {
+		t.Fatalf("host = %q, want %q", got, want)
 	}
 }

@@ -38,8 +38,17 @@ type HandlerSandboxDetailResponse struct {
 	// ClientID ClientID identifies this platform to SDK clients.
 	ClientID *string `json:"client_id,omitempty"`
 
+	// Domain Domain is the sandbox access domain returned by the provider.
+	Domain *string `json:"domain,omitempty"`
+
 	// EndAt EndAt is the scheduled or actual sandbox end time.
 	EndAt *time.Time `json:"end_at"`
+
+	// EnvdAccessToken EnvdAccessToken is the temporary access token required to connect to envd.
+	EnvdAccessToken *string `json:"envd_access_token,omitempty"`
+
+	// EnvdSandboxID EnvdSandboxID is the sandbox ID used for envd and traffic proxy routing.
+	EnvdSandboxID *string `json:"envd_sandbox_id,omitempty"`
 
 	// EnvdVersion EnvdVersion is the envd component version inside the sandbox.
 	EnvdVersion *string `json:"envd_version,omitempty"`
@@ -55,6 +64,9 @@ type HandlerSandboxDetailResponse struct {
 
 	// TemplateID TemplateID is the template used by the sandbox.
 	TemplateID *string `json:"template_id,omitempty"`
+
+	// TrafficAccessToken TrafficAccessToken is the temporary token required to access the sandbox traffic proxy.
+	TrafficAccessToken *string `json:"traffic_access_token,omitempty"`
 }
 
 // HandlerSandboxLogsResponse defines model for handler_SandboxLogsResponse.
@@ -121,6 +133,9 @@ type HandlerSandboxResponse struct {
 
 	// EnvdAccessToken EnvdAccessToken is the temporary access token required to connect to envd.
 	EnvdAccessToken *string `json:"envd_access_token,omitempty"`
+
+	// EnvdSandboxID EnvdSandboxID is the sandbox ID used for envd and traffic proxy routing.
+	EnvdSandboxID *string `json:"envd_sandbox_id,omitempty"`
 
 	// EnvdVersion EnvdVersion is the envd component version inside the sandbox.
 	EnvdVersion *string `json:"envd_version,omitempty"`

@@ -54,8 +54,10 @@ func Create(info CreateInfo) {
 	}
 
 	ctx := context.Background()
+	secure := true
 	params := sandbox.CreateParams{
 		TemplateID: info.TemplateID,
+		Secure:     &secure,
 	}
 	if info.Timeout > 0 {
 		params.Timeout = &info.Timeout

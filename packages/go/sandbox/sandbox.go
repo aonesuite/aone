@@ -32,6 +32,7 @@ const mcpPort = 50005
 // operations; helper clients are created on first use and then cached.
 type Sandbox struct {
 	sandboxID          string
+	envdSandboxID      string
 	templateID         string
 	clientID           string
 	alias              *string
@@ -61,6 +62,7 @@ type Sandbox struct {
 func newSandbox(c *Client, s *apis.Sandbox) *Sandbox {
 	sb := &Sandbox{
 		sandboxID:          stringValue(s.SandboxID),
+		envdSandboxID:      stringValue(s.EnvdSandboxID),
 		templateID:         stringValue(s.TemplateID),
 		clientID:           stringValue(s.ClientID),
 		domain:             s.Domain,
@@ -70,6 +72,9 @@ func newSandbox(c *Client, s *apis.Sandbox) *Sandbox {
 	if s.EnvdAccessToken != nil {
 		sb.envdAccessToken = s.EnvdAccessToken
 		sb.envdTokenLoaded = true
+	}
+	if sb.envdSandboxID == "" {
+		sb.envdSandboxID = sb.sandboxID
 	}
 	return sb
 }
@@ -202,11 +207,31 @@ func (s *Sandbox) SetTimeout(ctx context.Context, timeout time.Duration) error {
 	return nil
 }
 
-// refreshEnvdToken signals that the create/connect response did not include an
-// envd access token. The detail endpoint does not expose the token, so the SDK
-// has no way to recover it after the fact and fails fast.
-func (s *Sandbox) refreshEnvdToken(_ context.Context) error {
-	return fmt.Errorf("get sandbox %s for envd token: response does not include envd access token", s.sandboxID)
+// refreshEnvdToken fetches sandbox detail when create/connect did not include
+// the temporary envd token.
+func (s *Sandbox) refreshEnvdToken(ctx context.Context) error {
+	resp, err := s.client.api.GetSandboxesSandboxIDWithResponse(ctx, s.sandboxID)
+	if err != nil {
+		return fmt.Errorf("get sandbox %s for envd token: %w", s.sandboxID, err)
+	}
+	if resp.JSON200 == nil {
+		return newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceSandbox)
+	}
+	token := resp.JSON200.EnvdAccessToken
+	if token == nil || *token == "" {
+		return fmt.Errorf("get sandbox %s for envd token: response does not include envd access token", s.sandboxID)
+	}
+	s.envdTokenMu.Lock()
+	s.envdAccessToken = token
+	s.envdTokenLoaded = true
+	s.envdTokenMu.Unlock()
+	if resp.JSON200.EnvdSandboxID != nil && *resp.JSON200.EnvdSandboxID != "" {
+		s.envdSandboxID = *resp.JSON200.EnvdSandboxID
+	}
+	if resp.JSON200.Domain != nil && *resp.JSON200.Domain != "" {
+		s.domain = resp.JSON200.Domain
+	}
+	return nil
 }
 
 // GetInfo fetches the latest detailed state for the sandbox.
@@ -413,7 +438,11 @@ func (s *Sandbox) GetHost(port int) string {
 	if s.domain == nil || *s.domain == "" {
 		return ""
 	}
-	return fmt.Sprintf("%d-%s.%s", port, s.sandboxID, *s.domain)
+	sandboxID := s.envdSandboxID
+	if sandboxID == "" {
+		sandboxID = s.sandboxID
+	}
+	return fmt.Sprintf("%d-%s.%s", port, sandboxID, *s.domain)
 }
 
 // GetMCPURL returns the MCP gateway URL for sandboxes created with MCP enabled.
