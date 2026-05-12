@@ -19,11 +19,11 @@ func TestFormatTimestamp(t *testing.T) {
 
 func TestFormatBytes(t *testing.T) {
 	cases := map[int64]string{
-		0:                       "0 MiB",
-		1024 * 1024:             "1 MiB",
-		512 * 1024 * 1024:       "512 MiB",
-		2 * 1024 * 1024 * 1024:  "2048 MiB",
-		3*1024*1024 + 512*1024:  "3.5 MiB", // .5 mantissa
+		0:                      "0 MiB",
+		1024 * 1024:            "1 MiB",
+		512 * 1024 * 1024:      "512 MiB",
+		2 * 1024 * 1024 * 1024: "2048 MiB",
+		3*1024*1024 + 512*1024: "3.5 MiB", // .5 mantissa
 	}
 	for in, want := range cases {
 		if got := FormatBytes(in); got != want {

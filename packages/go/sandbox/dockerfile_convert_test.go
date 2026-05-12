@@ -39,6 +39,17 @@ func TestConvertDockerfile(t *testing.T) {
 	}
 }
 
+func TestConvertDockerfileExtractsImageWithFromOptionsAndAlias(t *testing.T) {
+	content := "FROM --platform=linux/amd64 alpine:3.19 AS runtime\n"
+	result, err := ConvertDockerfile(content)
+	if err != nil {
+		t.Fatalf("ConvertDockerfile: %v", err)
+	}
+	if result.BaseImage != "alpine:3.19" {
+		t.Fatalf("base image %q", result.BaseImage)
+	}
+}
+
 func TestConvertDockerfileRequiresFROM(t *testing.T) {
 	_, err := ConvertDockerfile("RUN echo hi\n")
 	if err == nil {

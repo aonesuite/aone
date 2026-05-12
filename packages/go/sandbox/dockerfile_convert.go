@@ -183,6 +183,9 @@ func applyConvertedSteps(b *TemplateBuilder, steps []TemplateStep) {
 // extractDockerImage extracts the image name from FROM arguments and ignores AS aliases.
 func extractDockerImage(args string) string {
 	for _, f := range strings.Fields(args) {
+		if strings.HasPrefix(f, "--") {
+			continue
+		}
 		if strings.ToUpper(f) == "AS" {
 			break
 		}

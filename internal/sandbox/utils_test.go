@@ -35,14 +35,14 @@ func TestParseStates(t *testing.T) {
 
 func TestParseMetadata_QueryFormat(t *testing.T) {
 	cases := map[string]string{
-		"":                       "",
-		"k=v":                    "k=v",
-		"a=1,b=2":                "a=1&b=2",
-		" a = 1 , b = 2 ":        "a=1&b=2",
-		"a=1,,b=2":               "a=1&b=2",
-		"a=1,malformed,b=2":      "a=1&b=2", // missing '=' is dropped
-		"a=,b=2":                 "b=2",     // empty value dropped
-		"=v,b=2":                 "b=2",     // empty key dropped
+		"":                  "",
+		"k=v":               "k=v",
+		"a=1,b=2":           "a=1&b=2",
+		" a = 1 , b = 2 ":   "a=1&b=2",
+		"a=1,,b=2":          "a=1&b=2",
+		"a=1,malformed,b=2": "a=1&b=2", // missing '=' is dropped
+		"a=,b=2":            "b=2",     // empty value dropped
+		"=v,b=2":            "b=2",     // empty key dropped
 	}
 	for in, want := range cases {
 		if got := ParseMetadata(in); got != want {
@@ -88,7 +88,7 @@ func TestIsLogLevelIncluded(t *testing.T) {
 		{"error", "info", true},
 		{"info", "warn", false},
 		{"warn", "warn", true},
-		{"INFO", "info", true},   // case-insensitive
+		{"INFO", "info", true}, // case-insensitive
 		{"info", "INFO", true},
 		{"info", "", true},        // empty min → include all
 		{"unknown", "info", true}, // unknown level → include
@@ -200,8 +200,8 @@ func TestMaskAPIKey(t *testing.T) {
 	cases := map[string]string{
 		"":                "",
 		"abc":             "***",
-		"abcdefgh":        "********",         // <=8 → all stars
-		"abcdefghi":       "abcd****fghi",     // 9 chars: prefix abcd, suffix fghi
+		"abcdefgh":        "********",     // <=8 → all stars
+		"abcdefghi":       "abcd****fghi", // 9 chars: prefix abcd, suffix fghi
 		"sk-1234567890ab": "sk-1****90ab",
 	}
 	for in, want := range cases {

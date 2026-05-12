@@ -12,6 +12,7 @@ import (
 // Directions follow scp semantics:
 //   - upload:   local path -> volume:remote
 //   - download: volume:remote -> local path
+//
 // A source or destination with the "volume:" prefix (or matching the info's
 // VolumeID) designates the remote side; exactly one side must be remote.
 type CpInfo struct {

@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Go Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            packages/go/sandbox/go.sum
+
+      - name: Verify gofmt
+        shell: bash
+        run: |
+          mapfile -t files < <(find . -type f -name '*.go')
+          if [ "${#files[@]}" -eq 0 ]; then
+            exit 0
+          fi
+          unformatted="$(gofmt -l "${files[@]}")"
+          if [ -n "$unformatted" ]; then
+            echo "The following Go files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Verify root module is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Verify sandbox module is tidy
+        working-directory: packages/go/sandbox
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Vet root module
+        run: go vet ./...
+
+      - name: Vet sandbox module
+        working-directory: packages/go/sandbox
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run staticcheck for root module
+        run: staticcheck ./...
+
+      - name: Run staticcheck for sandbox module
+        working-directory: packages/go/sandbox
+        run: staticcheck ./...
+
+      - name: Test root module
+        run: go test -trimpath -race -coverprofile=coverage-root.out ./...
+
+      - name: Test sandbox module
+        working-directory: packages/go/sandbox
+        run: go test -trimpath -race -coverprofile=coverage-sandbox.out ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage-${{ github.sha }}
+          path: |
+            coverage-root.out
+            packages/go/sandbox/coverage-sandbox.out
+          if-no-files-found: ignore
+
+  build:
+    name: Build CLI
+    runs-on: ubuntu-latest
+    needs:
+      - checks
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            packages/go/sandbox/go.sum
+
+      - name: Build CLI binary
+        run: make build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aone-cli-${{ github.sha }}
+          path: bin/

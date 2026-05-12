@@ -12,10 +12,10 @@ import (
 // logs verbatim. Comparison is case-insensitive (net/http already
 // canonicalizes header keys, but env-driven test cases sometimes don't).
 var sensitiveHeaders = map[string]struct{}{
-	"x-api-key":     {},
-	"authorization": {},
-	"cookie":        {},
-	"set-cookie":    {},
+	"x-api-key":           {},
+	"authorization":       {},
+	"cookie":              {},
+	"set-cookie":          {},
 	"proxy-authorization": {},
 }
 

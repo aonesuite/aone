@@ -207,19 +207,19 @@ type SandboxInfo struct {
 
 // ListedSandbox is the compact sandbox representation returned by list calls.
 type ListedSandbox struct {
-	SandboxID    string
-	TemplateID   string
-	ClientID     string
-	Alias        *string
-	State        SandboxState
-	CPUCount     int32
-	MemoryMB     int32
-	DiskSizeMB   int32
-	EnvdVersion  string
-	StartedAt    time.Time
-	EndAt        time.Time
-	Metadata *Metadata
-	Name     *string
+	SandboxID   string
+	TemplateID  string
+	ClientID    string
+	Alias       *string
+	State       SandboxState
+	CPUCount    int32
+	MemoryMB    int32
+	DiskSizeMB  int32
+	EnvdVersion string
+	StartedAt   time.Time
+	EndAt       time.Time
+	Metadata    *Metadata
+	Name        *string
 }
 
 // SandboxMetric is a single resource-usage sample for a sandbox.
