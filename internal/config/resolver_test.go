@@ -1,7 +1,11 @@
 package config
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+
+	"github.com/aonesuite/aone/internal/log"
 )
 
 // resolverEnv isolates a resolver test by pointing the config home at a temp
@@ -121,5 +125,39 @@ func TestResolve_EmptyFlagDoesNotShadowEnv(t *testing.T) {
 	}
 	if got.APIKey != "k-env" || got.APIKeySource != SourceEnv {
 		t.Fatalf("APIKey = %q (%s); empty flag must not shadow env", got.APIKey, got.APIKeySource)
+	}
+}
+
+// TestResolve_DebugLogRedactsEndpoint is the regression test for the
+// endpoint leak: a misconfigured endpoint with userinfo or a query token
+// must not appear verbatim in the DEBUG log, since `config picks` lines
+// frequently end up in support tickets.
+func TestResolve_DebugLogRedactsEndpoint(t *testing.T) {
+	resolverEnv(t)
+	t.Setenv(EnvEndpoint, "https://user:hunter2@api.example.com/v1?token=SECRETTOKEN")
+	t.Setenv(EnvAPIKey, "k-env")
+
+	var buf bytes.Buffer
+	log.Init(log.InitOptions{
+		ResolveOptions: log.ResolveOptions{DebugFlag: true, Env: func(string) string { return "" }},
+		Stderr:         &buf,
+	})
+	t.Cleanup(func() {
+		log.Init(log.InitOptions{ResolveOptions: log.ResolveOptions{Env: func(string) string { return "" }}})
+	})
+
+	if _, err := (Resolver{}).Resolve(); err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	out := buf.String()
+	if strings.Contains(out, "hunter2") {
+		t.Fatalf("userinfo password leaked: %q", out)
+	}
+	if strings.Contains(out, "SECRETTOKEN") {
+		t.Fatalf("query token leaked: %q", out)
+	}
+	if !strings.Contains(out, "api.example.com") {
+		t.Fatalf("host should still be visible: %q", out)
 	}
 }

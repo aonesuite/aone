@@ -3,11 +3,13 @@ package cmd
 import (
 	"bytes"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/aonesuite/aone/internal/config"
+	logpkg "github.com/aonesuite/aone/internal/log"
 )
 
 // captureStdout redirects os.Stdout while fn runs and returns the captured bytes.
@@ -120,6 +122,65 @@ func TestRoot_DebugFlagSetsEnv(t *testing.T) {
 	_ = rootCmd.Execute() // we don't care about success, only the side effect
 	if os.Getenv(config.EnvDebug) != "1" {
 		t.Fatalf("AONE_DEBUG not set after --debug: %q", os.Getenv(config.EnvDebug))
+	}
+}
+
+// TestRoot_VerbosityFlagSetsLogLevel exercises the new -v / -vv flags and
+// confirms PersistentPreRun resolves them into the global logger level.
+// We drive rootCmd end-to-end (rather than calling ResolveLevel directly)
+// so any future regression in flag wiring is caught.
+func TestRoot_VerbosityFlagSetsLogLevel(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want slog.Level
+	}{
+		{"single -v enables debug", []string{"-v", "auth", "info"}, slog.LevelDebug},
+		{"double -vv enables trace", []string{"-vv", "auth", "info"}, logpkg.LevelTrace},
+		{"--debug enables debug", []string{"--debug", "auth", "info"}, slog.LevelDebug},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateConfig(t)
+			t.Setenv("AONE_DEBUG", "")
+			t.Setenv("AONE_LOG_LEVEL", "")
+			prevD, prevV := debugFlag, verbosityFlag
+			t.Cleanup(func() {
+				debugFlag = prevD
+				verbosityFlag = prevV
+			})
+
+			rootCmd.SetArgs(tc.args)
+			out := bytes.Buffer{}
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&out)
+			_ = rootCmd.Execute()
+
+			got := slog.Level(logpkg.CurrentLevel())
+			if got != tc.want {
+				t.Fatalf("level = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestRoot_StdoutNotPollutedByDebugLogs verifies the "logs go to stderr"
+// contract — pipelines like `aone ... | jq` keep working under --debug.
+func TestRoot_StdoutNotPollutedByDebugLogs(t *testing.T) {
+	isolateConfig(t)
+	prev := debugFlag
+	t.Cleanup(func() { debugFlag = prev })
+
+	rootCmd.SetArgs([]string{"--debug", "auth", "info"})
+	stdout := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			_ = rootCmd.Execute()
+		})
+	})
+	// "level=DEBUG" is slog's text-handler signature; finding it in stdout
+	// would mean we accidentally wired logging to the wrong stream.
+	if strings.Contains(stdout, "level=DEBUG") {
+		t.Fatalf("debug logs leaked to stdout: %q", stdout)
 	}
 }
 

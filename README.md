@@ -94,9 +94,36 @@ aone sandbox volume     list | create | info | delete | ls | cat | cp |
 
 Common flags:
 
-- `--debug` — equivalent to `AONE_DEBUG=1`; enables verbose SDK logging.
-- `--version` / `-v` — print the CLI version.
+- `-v` / `-vv` — debug / trace logs to stderr (network calls, config resolution, redacted headers + bodies). Stdout stays clean so pipelines like `aone sandbox list -f json | jq` keep working.
+- `--debug` — alias of `-v`; also sets `AONE_DEBUG=1` so SDK-level debug paths fire.
+- `--version` — print the CLI version.
 - `--format pretty|json` — supported on `list`, `info`, `logs`, `metrics`.
+
+## Debug mode
+
+When something goes wrong, re-run the command with `-v` (debug) or `-vv`
+(trace). Output goes to **stderr** so pipelines aren't affected.
+
+```bash
+aone -v  sandbox list                # HTTP method/url/status/duration, config source
+aone -vv sandbox list                # + redacted request/response headers and bodies
+```
+
+Triggers (any one works; higher precedence wins):
+
+| Trigger | Resolved level |
+|---|---|
+| `AONE_LOG_LEVEL=trace\|debug\|info\|warn\|error` | as named |
+| `-vv` / `AONE_DEBUG=2` | trace |
+| `-v`  / `--debug` / `AONE_DEBUG=1` | debug |
+| _(none)_ | silent (warnings/errors only) |
+
+Other knobs:
+
+- `AONE_LOG_FORMAT=json` — emit JSON records instead of human-readable text.
+- `AONE_LOG_FILE=/tmp/aone.log` — write logs to this file (mode 0600) instead of stderr.
+
+API keys, `Authorization`, cookies, and JSON fields like `apiKey` / `password` / `token` are masked before logging.
 
 ## Environment variables
 
@@ -104,5 +131,8 @@ Common flags:
 |---|---|
 | `AONE_API_KEY` | API key (overrides config file) |
 | `AONE_SANDBOX_API_URL` | Control-plane endpoint |
-| `AONE_DEBUG` | `1` / `true` enables SDK debug logs |
+| `AONE_DEBUG` | `1`/`true` → debug logs; `2`/`trace` → trace logs |
+| `AONE_LOG_LEVEL` | Explicit level (`trace`/`debug`/`info`/`warn`/`error`) — overrides `-v`/`AONE_DEBUG` |
+| `AONE_LOG_FORMAT` | `json` switches log records to JSON; default is text |
+| `AONE_LOG_FILE` | Write log records to this file (mode 0600) instead of stderr |
 | `AONE_CONFIG_HOME` | Override `~/.config/aone` (test isolation) |

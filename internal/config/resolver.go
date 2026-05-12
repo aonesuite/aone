@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"github.com/aonesuite/aone/internal/log"
 	"github.com/aonesuite/aone/packages/go/sandbox"
 )
 
@@ -41,6 +42,16 @@ func (r Resolver) Resolve() (*Resolved, error) {
 		return nil, err
 	}
 
+	// Path() can't fail here in any way Load() didn't already surface,
+	// but we still log it so users know which config file was consulted.
+	if p, perr := Path(); perr == nil {
+		log.Debug("config resolved",
+			"config_path", p,
+			"file_has_api_key", f.APIKey != "",
+			"file_has_endpoint", f.Endpoint != "",
+		)
+	}
+
 	out := &Resolved{}
 
 	switch {
@@ -72,5 +83,28 @@ func (r Resolver) Resolve() (*Resolved, error) {
 		out.EndpointSource = SourceDefault
 	}
 
+	// Final picks; mask the API key so even debug logs don't leak it,
+	// and run the endpoint through RedactURL in case it was configured
+	// with embedded userinfo or query-string credentials.
+	log.Debug("config picks",
+		"api_key_source", string(out.APIKeySource),
+		"api_key", maskKey(out.APIKey),
+		"endpoint_source", string(out.EndpointSource),
+		"endpoint", log.RedactURL(out.Endpoint),
+	)
+
 	return out, nil
+}
+
+// maskKey returns a redacted form of the API key suitable for logs:
+// keep 4 char prefix + 4 char suffix, replace middle with ****. Mirrors
+// sandbox.MaskAPIKey but defined locally to avoid an import cycle.
+func maskKey(k string) string {
+	if k == "" {
+		return ""
+	}
+	if len(k) <= 8 {
+		return "********"
+	}
+	return k[:4] + "****" + k[len(k)-4:]
 }

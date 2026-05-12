@@ -2,21 +2,26 @@ package cmd
 
 import (
 	"os"
+	"runtime"
 	"runtime/debug"
 
 	"github.com/spf13/cobra"
 
 	"github.com/aonesuite/aone/internal/config"
+	"github.com/aonesuite/aone/internal/log"
 )
 
 // version is overwritten via -ldflags at release time. The fallback reads
 // build info so `go install` users still get a meaningful version string.
 var version = "dev"
 
-// debugFlag mirrors AONE_DEBUG via a top-level --debug flag. The flag is
-// applied early in PersistentPreRun so subcommands building SDK clients pick
-// it up through the standard env-driven path.
+// debugFlag mirrors AONE_DEBUG via a top-level --debug flag. Equivalent
+// to -v: useful when users want the simplest possible knob.
 var debugFlag bool
+
+// verbosityFlag is incremented by -v / -vv. 1 → debug, 2+ → trace. Kept
+// separate from --debug so both can be present without confusion.
+var verbosityFlag int
 
 // rootCmd is the top-level cobra command. Subcommands are added via init()
 // in their respective files (auth.go, sandbox.go, …) to keep this file thin.
@@ -32,6 +37,26 @@ var rootCmd = &cobra.Command{
 		if debugFlag {
 			_ = os.Setenv(config.EnvDebug, "1")
 		}
+
+		// Initialize the global structured logger. ResolveLevel handles
+		// the precedence (AONE_LOG_LEVEL > -v/-vv > AONE_DEBUG > --debug
+		// > default-silent), so we just hand it both inputs.
+		log.Init(log.InitOptions{
+			ResolveOptions: log.ResolveOptions{
+				DebugFlag: debugFlag,
+				Verbosity: verbosityFlag,
+			},
+		})
+
+		// One-time startup banner at DEBUG so triage tickets carry the
+		// environment context we'd otherwise have to ask the user for.
+		log.Debug("aone cli startup",
+			"version", resolveVersion(),
+			"go", runtime.Version(),
+			"os", runtime.GOOS,
+			"arch", runtime.GOARCH,
+			"command", cmd.CommandPath(),
+		)
 	},
 }
 
@@ -62,5 +87,6 @@ func init() {
 		&cobra.Group{ID: "core", Title: "Account & configuration:"},
 		&cobra.Group{ID: "sandbox", Title: "Sandbox management:"},
 	)
-	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable SDK debug logging (equivalent to AONE_DEBUG=1)")
+	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug logging (equivalent to -v / AONE_DEBUG=1)")
+	rootCmd.PersistentFlags().CountVarP(&verbosityFlag, "verbose", "v", "increase log verbosity (-v debug, -vv trace); writes to stderr")
 }
