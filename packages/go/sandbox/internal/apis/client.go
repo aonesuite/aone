@@ -32,7 +32,7 @@ func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithRes
 	return &ClientWithResponses{client: client, raw: raw}, nil
 }
 
-func (c *ClientWithResponses) DoLegacyJSON(ctx context.Context, method string, path string, body any, out any) (*http.Response, []byte, error) {
+func (c *ClientWithResponses) DoJSON(ctx context.Context, method string, path string, body any, out any) (*http.Response, []byte, error) {
 	var reader io.Reader
 	if body != nil {
 		var buf bytes.Buffer
@@ -70,8 +70,8 @@ func (c *ClientWithResponses) DoLegacyJSON(ctx context.Context, method string, p
 	return resp, data, nil
 }
 
-// Compatibility aliases keep the hand-written SDK layer stable while the full
-// Aone generated client follows operation IDs from the upstream OpenAPI spec.
+// Aliases keep the hand-written SDK layer readable while the generated client
+// follows operation IDs from the OpenAPI spec.
 type CreateSandboxJSONRequestBody = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleCreateSandboxJSONRequestBody
 type ConnectSandboxJSONRequestBody = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleConnectSandboxJSONRequestBody
 type UpdateSandboxTimeoutJSONRequestBody = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleSetSandboxTimeoutJSONRequestBody

@@ -9,9 +9,8 @@
 //     plane.
 //   - Project-level template metadata: handled by the project subpackage.
 //
-// File format is intentionally minimal JSON for forward compatibility and
-// easy manual editing. Permissions are forced to 0600 because the API key
-// is sensitive.
+// File format is intentionally minimal JSON for easy manual editing.
+// Permissions are forced to 0600 because the API key is sensitive.
 package config
 
 import (

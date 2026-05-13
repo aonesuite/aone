@@ -38,10 +38,6 @@ type Config struct {
 	// empty, NewClient falls back to the AONE_API_KEY environment variable.
 	APIKey string
 
-	// Credentials is accepted for source compatibility with earlier SDK versions.
-	// Injection-rule APIs are intentionally not implemented in this package.
-	Credentials any
-
 	// Endpoint overrides DefaultEndpoint. When empty, NewClient falls back to
 	// the AONE_SANDBOX_API_URL environment variable and finally DefaultEndpoint.
 	Endpoint string
@@ -127,12 +123,10 @@ func reqidEditor() apis.RequestEditorFn {
 	}
 }
 
-// apiKeyEditor injects API key authentication headers. To stay compatible
-// with gateways that accept either form, it sets both X-API-Key and
-// Authorization: Bearer. If the caller already pre-set an Authorization
-// header (for example a request signed with custom credentials), the
-// editor leaves it alone and skips both headers so the caller's choice
-// wins.
+// apiKeyEditor injects API key authentication headers. The control plane
+// accepts both X-API-Key and Authorization: Bearer. If the caller already
+// pre-set an Authorization header, the editor leaves it alone and skips both
+// headers so the caller's choice wins.
 func apiKeyEditor(apiKey string) apis.RequestEditorFn {
 	return func(ctx context.Context, req *http.Request) error {
 		if req.Header.Get("Authorization") != "" {

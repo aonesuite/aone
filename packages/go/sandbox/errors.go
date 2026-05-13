@@ -57,8 +57,8 @@ var (
 	// to the sandbox itself having timed out (HTTP 502/503).
 	ErrTimeout = errors.New("request timed out")
 
-	// ErrTemplate is returned for template version / compatibility errors
-	// surfaced by envd or the control plane.
+	// ErrTemplate is returned for template version errors surfaced by envd or
+	// the control plane.
 	ErrTemplate = errors.New("template error")
 
 	// ErrBuild is returned when a template build fails. It is the parent of

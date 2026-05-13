@@ -28,10 +28,10 @@ func TestLoadProject_NoFileReturnsNil(t *testing.T) {
 	}
 }
 
-func TestLoadProject_PrefersAoneOverLegacy(t *testing.T) {
+func TestLoadProject_OnlyReadsAoneProjectFile(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, ProjectFileName), `template_id = "tpl-aone"`)
-	writeFile(t, filepath.Join(dir, "e2b.toml"), `template_id = "tpl-legacy"`)
+	writeFile(t, filepath.Join(dir, "other.toml"), `template_id = "tpl-other"`)
 
 	p, loc, err := LoadProject("", dir)
 	if err != nil {
@@ -40,32 +40,8 @@ func TestLoadProject_PrefersAoneOverLegacy(t *testing.T) {
 	if p.TemplateID != "tpl-aone" {
 		t.Fatalf("TemplateID = %q, want tpl-aone", p.TemplateID)
 	}
-	if loc.Legacy {
-		t.Fatalf("expected non-legacy location; got %+v", loc)
-	}
 	if filepath.Base(loc.Path) != ProjectFileName {
 		t.Fatalf("Path = %q, want suffix %q", loc.Path, ProjectFileName)
-	}
-}
-
-func TestLoadProject_FallsBackToLegacy(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "e2b.toml"), `template_id = "tpl-legacy"
-template_name = "old"
-dockerfile = "Dockerfile"
-cpu_count = 2
-memory_mb = 1024
-`)
-
-	p, loc, err := LoadProject("", dir)
-	if err != nil {
-		t.Fatalf("LoadProject: %v", err)
-	}
-	if p.TemplateID != "tpl-legacy" || p.TemplateName != "old" || p.CPUCount != 2 || p.MemoryMB != 1024 {
-		t.Fatalf("unexpected project: %+v", p)
-	}
-	if !loc.Legacy {
-		t.Fatalf("expected Legacy=true, got %+v", loc)
 	}
 }
 
@@ -123,17 +99,13 @@ func TestSaveProject_RoundTrip(t *testing.T) {
 		t.Fatalf("SaveProject: %v", err)
 	}
 
-	got, loc, err := LoadProject(dest, "")
+	got, _, err := LoadProject(dest, "")
 	if err != nil {
 		t.Fatalf("LoadProject: %v", err)
 	}
 	if *got != *in {
 		t.Fatalf("roundtrip mismatch: got %+v want %+v", got, in)
 	}
-	if loc.Legacy {
-		t.Fatalf("expected non-legacy after SaveProject to canonical name")
-	}
-
 	// No leftover temp files.
 	entries, err := os.ReadDir(filepath.Dir(dest))
 	if err != nil {
@@ -156,21 +128,6 @@ func TestDefaultProjectPath(t *testing.T) {
 	got = DefaultProjectPath("/tmp/proj")
 	if got != filepath.Join("/tmp/proj", ProjectFileName) {
 		t.Fatalf("DefaultProjectPath = %q", got)
-	}
-}
-
-func TestIsLegacyName(t *testing.T) {
-	cases := map[string]bool{
-		"e2b.toml":          true,
-		"E2B.TOML":          true,
-		"aone.sandbox.toml": false,
-		"random.toml":       false,
-		"":                  false,
-	}
-	for name, want := range cases {
-		if got := isLegacyName(name); got != want {
-			t.Errorf("isLegacyName(%q) = %v, want %v", name, got, want)
-		}
 	}
 }
 

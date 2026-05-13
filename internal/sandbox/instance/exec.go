@@ -51,7 +51,7 @@ func Exec(info ExecInfo) {
 	}
 
 	// Build command string using shell-safe quoting so argv with spaces or
-	// quotes round-trips the same way as e2b's CLI behavior.
+	// quotes round-trips through the sandbox shell.
 	cmd := buildExecCommand(info.Command)
 
 	// Build command options

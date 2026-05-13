@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -14,11 +13,6 @@ import (
 // ProjectFileName is the canonical name of the per-project template config
 // file. It lives in the project root next to the Dockerfile.
 const ProjectFileName = "aone.sandbox.toml"
-
-// LegacyProjectFileNames is consulted when ProjectFileName is missing, to
-// help users migrating from upstream sandbox tooling. We never write to
-// these names; we only read them.
-var LegacyProjectFileNames = []string{"e2b.toml"}
 
 // Project holds the on-disk fields persisted to aone.sandbox.toml.
 //
@@ -57,15 +51,13 @@ type Project struct {
 // ProjectLocation describes where a Project was loaded from. Useful for
 // error messages and for writing the same file back atomically.
 type ProjectLocation struct {
-	Path   string // Absolute path to the TOML file
-	Legacy bool   // True if loaded from a legacy file name
+	Path string // Absolute path to the TOML file
 }
 
 // LoadProject finds and parses the project config file using this lookup order:
 //
 //  1. configPath (if non-empty) — exact file path, must exist.
 //  2. <pathDir>/aone.sandbox.toml
-//  3. <pathDir>/<legacy names…> (e.g. e2b.toml, read-only)
 //
 // pathDir defaults to the current working directory when empty.
 //
@@ -81,9 +73,6 @@ func LoadProject(configPath, pathDir string) (*Project, *ProjectLocation, error)
 		candidates = append(candidates, configPath)
 	} else {
 		candidates = append(candidates, filepath.Join(pathDir, ProjectFileName))
-		for _, legacy := range LegacyProjectFileNames {
-			candidates = append(candidates, filepath.Join(pathDir, legacy))
-		}
 	}
 
 	for _, c := range candidates {
@@ -106,10 +95,7 @@ func LoadProject(configPath, pathDir string) (*Project, *ProjectLocation, error)
 		if _, err := toml.Decode(string(data), &p); err != nil {
 			return nil, nil, fmt.Errorf("parse %s: %w", abs, err)
 		}
-		loc := &ProjectLocation{
-			Path:   abs,
-			Legacy: isLegacyName(filepath.Base(abs)),
-		}
+		loc := &ProjectLocation{Path: abs}
 		return &p, loc, nil
 	}
 
@@ -119,9 +105,7 @@ func LoadProject(configPath, pathDir string) (*Project, *ProjectLocation, error)
 	return nil, nil, nil
 }
 
-// SaveProject atomically writes p to dest. If dest points at a legacy file
-// name we still write to it (don't move the user's file behind their back),
-// but callers can detect via ProjectLocation.Legacy and warn.
+// SaveProject atomically writes p to dest.
 func SaveProject(p *Project, dest string) error {
 	abs, err := filepath.Abs(dest)
 	if err != nil {
@@ -160,16 +144,4 @@ func DefaultProjectPath(pathDir string) string {
 		pathDir = "."
 	}
 	return filepath.Join(pathDir, ProjectFileName)
-}
-
-// isLegacyName reports whether base matches one of the legacy file names.
-// Comparison is case-insensitive to avoid platform surprises.
-func isLegacyName(base string) bool {
-	lower := strings.ToLower(base)
-	for _, name := range LegacyProjectFileNames {
-		if lower == strings.ToLower(name) {
-			return true
-		}
-	}
-	return false
 }

@@ -51,7 +51,7 @@ func Migrate(info MigrateInfo) {
 		root = cwd
 	}
 
-	projectCfg, projectLoc, err := config.LoadProject(info.ConfigPath, root)
+	projectCfg, _, err := config.LoadProject(info.ConfigPath, root)
 	if err != nil {
 		sbClient.PrintError("%v", err)
 		return
@@ -62,9 +62,6 @@ func Migrate(info MigrateInfo) {
 		}
 		if info.Name == "" {
 			info.Name = projectCfg.TemplateName
-		}
-		if projectLoc != nil && projectLoc.Legacy {
-			sbClient.PrintWarn("Loaded legacy config %s; consider renaming to %s", projectLoc.Path, config.ProjectFileName)
 		}
 	}
 

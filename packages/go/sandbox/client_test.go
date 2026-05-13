@@ -163,7 +163,7 @@ func TestCreateRefreshesEnvdTokenFromDetail(t *testing.T) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/sbx/sandboxes/sbx-test":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"sandbox_id":        "sbx-test",
-				"envd_sandbox_id":   "e2b-sbx-test",
+				"envd_sandbox_id":   "provider-sbx-test",
 				"template_id":       "tpl-test",
 				"client_id":         "aone",
 				"envd_version":      "0.5.4",
@@ -185,7 +185,7 @@ func TestCreateRefreshesEnvdTokenFromDetail(t *testing.T) {
 	if token == nil || *token != "envd-token" {
 		t.Fatalf("envd token = %+v", token)
 	}
-	if got, want := sb.GetHost(49983), "49983-e2b-sbx-test.example.test"; got != want {
+	if got, want := sb.GetHost(49983), "49983-provider-sbx-test.example.test"; got != want {
 		t.Fatalf("envd host = %q, want %q", got, want)
 	}
 }
@@ -193,7 +193,7 @@ func TestCreateRefreshesEnvdTokenFromDetail(t *testing.T) {
 func TestSandboxUsesEnvdSandboxIDForHosts(t *testing.T) {
 	domain := "sandbox.example.test"
 	sandboxID := "sbx-local"
-	envdSandboxID := "e2b-provider"
+	envdSandboxID := "provider-sandbox"
 	sb := newSandbox(nil, &apis.Sandbox{
 		SandboxID:     &sandboxID,
 		EnvdSandboxID: &envdSandboxID,
@@ -202,7 +202,7 @@ func TestSandboxUsesEnvdSandboxIDForHosts(t *testing.T) {
 	if got, want := sb.ID(), sandboxID; got != want {
 		t.Fatalf("ID = %q, want %q", got, want)
 	}
-	if got, want := sb.GetHost(49983), "49983-e2b-provider.sandbox.example.test"; got != want {
+	if got, want := sb.GetHost(49983), "49983-provider-sandbox.sandbox.example.test"; got != want {
 		t.Fatalf("host = %q, want %q", got, want)
 	}
 }

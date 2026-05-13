@@ -24,7 +24,7 @@ type SnapshotListParams struct {
 func (c *Client) CreateSnapshot(ctx context.Context, sandboxID string) (*SnapshotInfo, error) {
 	var out SnapshotInfo
 	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(sandboxID) + "/snapshots"
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, map[string]any{}, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodPost, path, map[string]any{}, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (c *Client) ListSnapshots(ctx context.Context, params *SnapshotListParams) 
 		}
 	}
 	var out []SnapshotInfo
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,7 +85,7 @@ func (s *Sandbox) ListSnapshots(ctx context.Context, params *SnapshotListParams)
 // was not found.
 func (c *Client) DeleteSnapshot(ctx context.Context, snapshotID string) (bool, error) {
 	path := "/api/v1/sbx/snapshots/" + url.PathEscape(snapshotID)
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, path, nil, nil)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodDelete, path, nil, nil)
 	if err != nil {
 		return false, err
 	}

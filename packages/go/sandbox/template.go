@@ -105,7 +105,7 @@ func (c *Client) StartTemplateBuild(ctx context.Context, templateID, buildID str
 		return err
 	}
 	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/builds/" + url.PathEscape(buildID)
-	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, apiBody, nil)
+	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, path, apiBody, nil)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (c *Client) StartTemplateBuild(ctx context.Context, templateID, buildID str
 func (c *Client) GetTemplateFiles(ctx context.Context, templateID, hash string) (*TemplateBuildFileUpload, error) {
 	var out TemplateBuildFileUpload
 	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/files/" + url.PathEscape(hash)
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (c *Client) GetTemplateFiles(ctx context.Context, templateID, hash string) 
 func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*TemplateAliasResponse, error) {
 	var out TemplateAliasResponse
 	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*Templat
 func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, error) {
 	var out TemplateAliasResponse
 	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return false, err
 	}
@@ -169,7 +169,7 @@ func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, e
 // AssignTemplateTags assigns tags to the target described by body.
 func (c *Client) AssignTemplateTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
 	var out AssignedTemplateTags
-	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, "/api/v1/sbx/templates/tags", body.toAPI(), &out)
+	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, "/api/v1/sbx/templates/tags", body.toAPI(), &out)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (c *Client) AssignTemplateTags(ctx context.Context, body ManageTagsParams) 
 
 // DeleteTemplateTags removes tags from a template target.
 func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) error {
-	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodDelete, "/api/v1/sbx/templates/tags", body.toAPI(), nil)
+	resp, respBody, err := c.api.DoJSON(ctx, http.MethodDelete, "/api/v1/sbx/templates/tags", body.toAPI(), nil)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) 
 func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
 	var out []TemplateTagInfo
 	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/tags"
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}

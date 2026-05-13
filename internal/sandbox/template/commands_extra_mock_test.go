@@ -110,8 +110,8 @@ func TestInit_ScaffoldsGo(t *testing.T) {
 	}
 }
 
-// TestInit_PathActsAsRootDir aligns with e2b's init semantics: --path points
-// at the parent/root directory, and the template name becomes a child folder.
+// TestInit_PathActsAsRootDir verifies --path points at the parent/root
+// directory, and the template name becomes a child folder.
 func TestInit_PathActsAsRootDir(t *testing.T) {
 	root := t.TempDir()
 	target := filepath.Join(root, "demo")

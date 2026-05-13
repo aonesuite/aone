@@ -297,7 +297,7 @@ func (s *Sandbox) GetLogs(ctx context.Context, params *GetLogsParams) (*SandboxL
 // Pause pauses the sandbox when the backend supports pausing for the current state.
 func (s *Sandbox) Pause(ctx context.Context) error {
 	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/pause"
-	resp, body, err := s.client.api.DoLegacyJSON(ctx, http.MethodPost, path, nil, nil)
+	resp, body, err := s.client.api.DoJSON(ctx, http.MethodPost, path, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -313,11 +313,6 @@ type ResumeParams struct {
 	// Timeout is the new TTL (seconds) for the resumed sandbox. Nil keeps
 	// the server-side default.
 	Timeout *int32
-
-	// AutoPause re-arms automatic pause-on-timeout for the resumed sandbox.
-	// Deprecated by the API but kept here so callers preserving legacy
-	// behavior can pass it through.
-	AutoPause *bool
 }
 
 // Resume resumes a paused sandbox. A 201 response indicates success.
@@ -326,11 +321,8 @@ func (c *Client) Resume(ctx context.Context, sandboxID string, params ResumePara
 	if params.Timeout != nil {
 		body["timeout"] = params.Timeout
 	}
-	if params.AutoPause != nil {
-		body["autoPause"] = params.AutoPause
-	}
 	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(sandboxID) + "/resume"
-	resp, respBody, err := c.api.DoLegacyJSON(ctx, http.MethodPost, path, body, nil)
+	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, path, body, nil)
 	if err != nil {
 		return err
 	}
@@ -343,7 +335,7 @@ func (c *Client) Resume(ctx context.Context, sandboxID string, params ResumePara
 // Refresh extends the sandbox lifetime using the duration in params.
 func (s *Sandbox) Refresh(ctx context.Context, params RefreshParams) error {
 	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/refreshes"
-	resp, body, err := s.client.api.DoLegacyJSON(ctx, http.MethodPost, path, params.toAPI(), nil)
+	resp, body, err := s.client.api.DoJSON(ctx, http.MethodPost, path, params.toAPI(), nil)
 	if err != nil {
 		return err
 	}
@@ -398,7 +390,7 @@ func (c *Client) GetSandboxesMetrics(ctx context.Context, params *GetSandboxesMe
 		path += "?" + q.Encode()
 	}
 	var out SandboxesWithMetrics
-	resp, body, err := c.api.DoLegacyJSON(ctx, http.MethodGet, path, nil, &out)
+	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
 	if err != nil {
 		return nil, err
 	}

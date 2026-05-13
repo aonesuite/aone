@@ -252,13 +252,9 @@ func headerMap(h http.Header) map[string]string {
 	return out
 }
 
-// Environment variable names retained for backward compatibility. New code
-// should prefer the constants exported from internal/config.
 const (
-	// EnvAoneSandboxAPIURL is the legacy export of config.EnvEndpoint.
 	EnvAoneSandboxAPIURL = config.EnvEndpoint
-	// EnvAoneAPIKey is the legacy export of config.EnvAPIKey.
-	EnvAoneAPIKey = config.EnvAPIKey
+	EnvAoneAPIKey        = config.EnvAPIKey
 )
 
 // loadDotEnv loads variables from the .env file in the current directory.

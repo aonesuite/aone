@@ -231,9 +231,9 @@ func TestGenerateGoTemplate_ContainsExpectedStructure(t *testing.T) {
 			t.Errorf("Go template missing %q; full:\n%s", s, out)
 		}
 	}
-	// Forbid leftover legacy brand strings.
-	if strings.Contains(strings.ToLower(out), "e2b") {
-		t.Errorf("generated Go template still references e2b:\n%s", out)
+	// Generated templates should use only aone imports.
+	if !strings.Contains(out, "github.com/aonesuite/aone/packages/go/sandbox") {
+		t.Errorf("generated Go template missing aone import:\n%s", out)
 	}
 }
 
@@ -257,8 +257,8 @@ func TestGenerateTypeScriptTemplate_UsesAonesuiteImport(t *testing.T) {
 			t.Errorf("TS template missing %q; full:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "from 'e2b'") {
-		t.Errorf("TS template still imports from e2b:\n%s", out)
+	if !strings.Contains(out, "from '@aonesuite/sandbox'") {
+		t.Errorf("TS template missing aone import:\n%s", out)
 	}
 }
 
@@ -282,8 +282,8 @@ func TestGeneratePythonTemplate_UsesAonesuiteImport(t *testing.T) {
 			t.Errorf("Python template missing %q; full:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "from e2b ") {
-		t.Errorf("Python template still imports from e2b:\n%s", out)
+	if !strings.Contains(out, "from aonesuite.sandbox") {
+		t.Errorf("Python template missing aone import:\n%s", out)
 	}
 }
 

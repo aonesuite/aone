@@ -77,9 +77,6 @@ func Build(info BuildInfo) {
 	}
 	if projectCfg != nil {
 		applyProjectDefaults(&info, projectCfg)
-		if projectLoc != nil && projectLoc.Legacy {
-			sbClient.PrintWarn("Loaded legacy config %s; consider renaming to %s", projectLoc.Path, config.ProjectFileName)
-		}
 	}
 	if info.Dockerfile == "" && info.FromImage == "" && info.FromTemplate == "" {
 		if resolved, err := resolveDockerfilePath(info.Path, ""); err == nil {

@@ -314,7 +314,7 @@ func ParseEnvValues(rest string, escapeToken rune) ([]string, error) {
 		return parseEnvKeyValue(rest, escapeToken), nil
 	}
 
-	// Legacy format: ENV KEY VALUE.
+	// Alternate format: ENV KEY VALUE.
 	key, value, _ := strings.Cut(rest, " ")
 	return []string{key, strings.TrimSpace(value)}, nil
 }

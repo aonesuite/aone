@@ -75,9 +75,6 @@ memory_mb     = 0
 Commands that consume the file: `template build`, `template create`,
 `template delete`, `template publish` / `unpublish`, `sandbox create`.
 
-A legacy `e2b.toml` is read (with a warning) when `aone.sandbox.toml` is
-missing, so existing projects can migrate incrementally.
-
 ## Command reference
 
 Top-level groups (run `aone <cmd> --help` for full flag listings):

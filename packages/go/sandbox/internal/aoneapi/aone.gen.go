@@ -74,7 +74,7 @@ type HandlerSandboxLogsResponse struct {
 	// LogEntries LogEntries is the structured log entry list field.
 	LogEntries *[]ServiceSandboxLogEntry `json:"log_entries,omitempty"`
 
-	// Logs Logs is the legacy SDK-compatible log list field.
+	// Logs Logs is the SDK log list field.
 	Logs *[]ServiceSandboxLogEntry `json:"logs,omitempty"`
 }
 
@@ -176,7 +176,7 @@ type HandlerTemplateBuildStatusResponse struct {
 	// LogEntries LogEntries is the structured build log entry list.
 	LogEntries *[]ServiceBuildLogEntry `json:"log_entries,omitempty"`
 
-	// Logs Logs is the legacy SDK-compatible text log list.
+	// Logs Logs is the SDK text log list.
 	Logs *[]string `json:"logs,omitempty"`
 
 	// Status Status is the build status.
@@ -188,7 +188,7 @@ type HandlerTemplateBuildStatusResponse struct {
 
 // HandlerTemplateResponse defines model for handler_TemplateResponse.
 type HandlerTemplateResponse struct {
-	// Aliases Aliases is the SDK-compatible template alias list.
+	// Aliases Aliases is the SDK template alias list.
 	Aliases *[]string `json:"aliases,omitempty"`
 
 	// BuildID BuildID is the latest template build ID.
@@ -384,7 +384,7 @@ type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListTemplatesPar
 
 // GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleCreateTemplateJSONBody defines parameters for GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleCreateTemplate.
 type GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleCreateTemplateJSONBody struct {
-	// Alias Alias is the SDK-compatible template alias.
+	// Alias Alias is the SDK template alias.
 	Alias *string `json:"alias,omitempty"`
 
 	// CPUCount CPUCount is the default CPU count for the template.

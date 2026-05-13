@@ -31,8 +31,7 @@ func TestScaffold_GeneratesAllExpectedFilesPerLanguage(t *testing.T) {
 				}
 			}
 
-			// aone.sandbox.toml must be the canonical name (not a legacy one)
-			// and contain the project name passed in.
+			// aone.sandbox.toml must contain the project name passed in.
 			toml, err := os.ReadFile(filepath.Join(dir, "aone.sandbox.toml"))
 			if err != nil {
 				t.Fatalf("read aone.sandbox.toml: %v", err)
@@ -64,7 +63,7 @@ func TestScaffold_PythonAsyncIncludesAsyncHints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read Makefile: %v", err)
 	}
-	for _, want := range []string{"e2b:build:dev", "e2b:build:prod"} {
+	for _, want := range []string{"aone:build:dev", "aone:build:prod"} {
 		if !strings.Contains(string(makefile), want) {
 			t.Fatalf("Makefile should contain %q; got:\n%s", want, makefile)
 		}
@@ -81,7 +80,7 @@ func TestScaffold_PythonReadmeAndMakefileLookLikeTemplateProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read README.md: %v", err)
 	}
-	for _, want := range []string{"Prerequisites", "Installing Dependencies", "make e2b:build:dev", "Sandbox.create('demo-template')"} {
+	for _, want := range []string{"Prerequisites", "Installing Dependencies", "make aone:build:dev", "Sandbox.create('demo-template')"} {
 		if !strings.Contains(string(readme), want) {
 			t.Fatalf("README.md should contain %q; got:\n%s", want, readme)
 		}
@@ -91,7 +90,7 @@ func TestScaffold_PythonReadmeAndMakefileLookLikeTemplateProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read Makefile: %v", err)
 	}
-	for _, want := range []string{"e2b:build:dev", "e2b:build:prod"} {
+	for _, want := range []string{"aone:build:dev", "aone:build:prod"} {
 		if !strings.Contains(string(makefile), want) {
 			t.Fatalf("Makefile should contain %q; got:\n%s", want, makefile)
 		}
@@ -108,7 +107,7 @@ func TestScaffold_TypeScriptReadmeLooksLikeTemplateProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read README.md: %v", err)
 	}
-	for _, want := range []string{"Prerequisites", "Installing Dependencies", "npm run e2b:build:dev", "Sandbox.create('demo-template')"} {
+	for _, want := range []string{"Prerequisites", "Installing Dependencies", "npm run aone:build:dev", "Sandbox.create('demo-template')"} {
 		if !strings.Contains(string(readme), want) {
 			t.Fatalf("README.md should contain %q; got:\n%s", want, readme)
 		}
@@ -125,7 +124,7 @@ func TestScaffold_TypeScriptAddsBuildScriptsAndReadme(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read package.json: %v", err)
 	}
-	for _, want := range []string{`"e2b:build:dev"`, `"e2b:build:prod"`, `build.dev.ts`, `build.prod.ts`} {
+	for _, want := range []string{`"aone:build:dev"`, `"aone:build:prod"`, `build.dev.ts`, `build.prod.ts`} {
 		if !strings.Contains(string(pkgJSON), want) {
 			t.Fatalf("package.json missing %q; got:\n%s", want, pkgJSON)
 		}
