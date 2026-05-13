@@ -2,6 +2,16 @@
 
 This repository is a Go CLI plus multi-language SDK monorepo. The root module builds the `aone` CLI. SDKs under `packages/` are independently published packages.
 
+Current development state:
+
+- The root CLI module uses the nested Go SDK through a local `replace` and
+  `go.work`.
+- The Go SDK module lives at `packages/go` and currently exposes `sandbox` and
+  `tts` as public packages.
+- A root CLI release must not be cut from the development module graph. Publish
+  or select a real `packages/go/vX.Y.Z` tag first, then update the root module
+  to require that version and remove the local `replace`.
+
 ## Go SDK
 
 The Go SDK lives at `packages/go` and has its own module path:
@@ -14,6 +24,12 @@ Sandbox users still import the public sandbox package:
 
 ```go
 import "github.com/aonesuite/aone/packages/go/sandbox"
+```
+
+TTS users import the public TTS package:
+
+```go
+import "github.com/aonesuite/aone/packages/go/tts"
 ```
 
 Because it is a nested Go module, its Git tags must include the module directory prefix:
@@ -55,6 +71,12 @@ Local development should use the checked-in `go.work` file:
 ```sh
 go test ./...
 cd packages/go && go test ./...
+```
+
+Regenerate SDK clients after OpenAPI or proto changes:
+
+```sh
+make generate
 ```
 
 When the Go SDK has a real published version, the preferred steady state is:

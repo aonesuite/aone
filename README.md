@@ -1,7 +1,9 @@
 # aone
 
-`aone` is the AoneSuite command-line tool for managing sandboxes, templates,
-volumes, and account credentials against the Aone API.
+`aone` is the AoneSuite command-line tool and SDK monorepo. The root module
+builds the CLI for managing sandboxes, templates, volumes, and account
+credentials against the Aone API. `packages/go` contains the Go SDK packages
+for sandbox automation and text-to-speech.
 
 ## Install
 
@@ -15,6 +17,13 @@ Or build from source:
 git clone https://github.com/aonesuite/aone
 cd aone
 go build -o aone .
+```
+
+Local development uses Go workspaces:
+
+```sh
+go test ./...
+cd packages/go && go test ./...
 ```
 
 ## Quick start
@@ -81,10 +90,10 @@ Top-level groups (run `aone <cmd> --help` for full flag listings):
 
 ```
 aone auth        login | logout | info | configure
-aone sandbox     list | create | connect | exec | logs | metrics | info |
-                 kill | pause | resume
-aone sandbox template   init | create | delete | publish | unpublish |
-                        list | get | builds | migrate
+aone sandbox     list | create | connect | info | kill | pause | resume |
+                 exec | logs | metrics
+aone sandbox template   init | create | list | get | delete | publish |
+                        unpublish | builds | migrate
 aone sandbox volume     list | create | info | delete | ls | cat | cp |
                         rm | mkdir
 ```
@@ -95,6 +104,91 @@ Common flags:
 - `--debug` — alias of `-v`; also sets `AONE_DEBUG=1` so SDK-level debug paths fire.
 - `--version` — print the CLI version.
 - `--format pretty|json` — supported on `list`, `info`, `logs`, `metrics`.
+
+Common aliases:
+
+- `aone sandbox` can be shortened to `aone sbx`.
+- `aone sandbox template` can be shortened to `aone sandbox tpl`.
+- `aone sandbox volume` can be shortened to `aone sandbox vol`.
+- Frequently used subcommands also have short aliases, for example `list` /
+  `ls`, `create` / `cr`, `connect` / `cn`, `exec` / `ex`, and `logs` / `lg`.
+
+`aone sandbox template create <template-name>` is the primary template build
+surface. The lower-level `template build` command still exists internally but
+is hidden from normal help output.
+
+`aone sandbox template migrate` converts an existing Dockerfile into
+SDK-native template code for Go, TypeScript, or Python.
+
+## Go SDK
+
+The Go SDK lives in the nested module:
+
+```text
+github.com/aonesuite/aone/packages/go
+```
+
+Current public packages:
+
+| Package | Purpose |
+|---|---|
+| `github.com/aonesuite/aone/packages/go/sandbox` | Create and operate sandboxes, commands, files, PTY sessions, Git repositories, snapshots, templates, and volumes. |
+| `github.com/aonesuite/aone/packages/go/tts` | List TTS voices and synthesize text into audio. |
+
+Sandbox example:
+
+```go
+import "github.com/aonesuite/aone/packages/go/sandbox"
+
+client, err := sandbox.NewClient(&sandbox.Config{
+	APIKey: os.Getenv("AONE_API_KEY"),
+})
+if err != nil {
+	return err
+}
+
+sb, _, err := client.CreateAndWait(ctx, sandbox.CreateParams{
+	TemplateID: "base",
+}, sandbox.WithPollInterval(2*time.Second))
+if err != nil {
+	return err
+}
+defer sb.Kill(ctx)
+```
+
+TTS example:
+
+```go
+import "github.com/aonesuite/aone/packages/go/tts"
+
+client, err := tts.NewClient(&tts.Config{
+	APIKey: os.Getenv("AONE_API_KEY"),
+})
+if err != nil {
+	return err
+}
+
+voices, err := client.ListVoices(ctx)
+if err != nil {
+	return err
+}
+if len(voices) == 0 {
+	return fmt.Errorf("no TTS voices available")
+}
+
+audio, err := client.Synthesize(ctx, tts.SynthesizeParams{
+	Text:  "Hello from Aone.",
+	Voice: voices[0].ID,
+})
+if err != nil {
+	return err
+}
+fmt.Println(audio.AudioURL)
+```
+
+Both SDK packages read `AONE_API_KEY` when `Config.APIKey` is empty and
+`AONE_API_URL` when `Config.Endpoint` is empty. The default endpoint is
+`https://api.aonesuite.com`.
 
 ## Debug mode
 
@@ -142,7 +236,7 @@ This repository is organized as a CLI plus multi-language SDK monorepo:
 |---|---|
 | `cmd/` | Go CLI entrypoint and command wiring |
 | `internal/` | CLI-only implementation details |
-| `packages/go/` | Go SDK module; `sandbox/` is the sandbox package and `internal/` holds shared generated clients |
+| `packages/go/` | Go SDK module; `sandbox/` and `tts/` are public packages, and `internal/` holds shared generated clients |
 | `packages/` | Home for language SDK packages such as future JS and Python SDKs |
 | `spec/` | Shared OpenAPI and proto specifications used by SDK code generation |
 
