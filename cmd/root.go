@@ -86,6 +86,7 @@ func init() {
 	rootCmd.AddGroup(
 		&cobra.Group{ID: "core", Title: "Account & configuration:"},
 		&cobra.Group{ID: "sandbox", Title: "Sandbox management:"},
+		&cobra.Group{ID: "media", Title: "Media:"},
 	)
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "enable debug logging (equivalent to -v / AONE_DEBUG=1)")
 	rootCmd.PersistentFlags().CountVarP(&verbosityFlag, "verbose", "v", "increase log verbosity (-v debug, -vv trace); writes to stderr")

@@ -79,6 +79,8 @@ start_cmd     = ""
 ready_cmd     = ""
 cpu_count     = 0
 memory_mb     = 0
+disk_size_mb  = 0
+public        = false
 ```
 
 Commands that consume the file: `template build`, `template create`,
@@ -93,7 +95,8 @@ aone auth        login | logout | info | configure
 aone sandbox     list | create | connect | info | kill | exec | logs |
                  metrics
 aone sandbox template   init | create | list | get | delete | publish |
-                        unpublish | builds | migrate
+                        unpublish | builds | logs | migrate
+aone tts         voices | speech
 ```
 
 Common flags:
@@ -107,6 +110,8 @@ Common aliases:
 
 - `aone sandbox` can be shortened to `aone sbx`.
 - `aone sandbox template` can be shortened to `aone sandbox tpl`.
+- `aone tts voices` lists available text-to-speech voices; `aone tts speech`
+  synthesizes text and prints the generated audio URL.
 - Frequently used subcommands also have short aliases, for example `list` /
   `ls`, `create` / `cr`, `connect` / `cn`, `exec` / `ex`, and `logs` / `lg`.
 

@@ -94,6 +94,8 @@ func TestSaveProject_RoundTrip(t *testing.T) {
 		StartCmd:     "/start.sh",
 		CPUCount:     4,
 		MemoryMB:     2048,
+		DiskSizeMB:   8192,
+		Public:       boolPtr(true),
 	}
 	if err := SaveProject(in, dest); err != nil {
 		t.Fatalf("SaveProject: %v", err)
@@ -103,7 +105,17 @@ func TestSaveProject_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadProject: %v", err)
 	}
-	if *got != *in {
+	if got.TemplateID != in.TemplateID ||
+		got.TemplateName != in.TemplateName ||
+		got.Dockerfile != in.Dockerfile ||
+		got.StartCmd != in.StartCmd ||
+		got.ReadyCmd != in.ReadyCmd ||
+		got.CPUCount != in.CPUCount ||
+		got.MemoryMB != in.MemoryMB ||
+		got.DiskSizeMB != in.DiskSizeMB ||
+		got.Public == nil ||
+		in.Public == nil ||
+		*got.Public != *in.Public {
 		t.Fatalf("roundtrip mismatch: got %+v want %+v", got, in)
 	}
 	// No leftover temp files.
@@ -117,6 +129,10 @@ func TestSaveProject_RoundTrip(t *testing.T) {
 		}
 		t.Fatalf("unexpected leftover %q", e.Name())
 	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func TestDefaultProjectPath(t *testing.T) {

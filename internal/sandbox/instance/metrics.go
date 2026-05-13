@@ -19,6 +19,8 @@ type MetricsInfo struct {
 	SandboxID string
 	Format    string // pretty or json
 	Follow    bool   // Keep streaming metrics until sandbox is closed
+	Start     int64
+	End       int64
 }
 
 // Metrics retrieves and displays sandbox resource metrics.
@@ -81,6 +83,11 @@ func Metrics(info MetricsInfo) {
 		if lastTimestamp != nil {
 			start := lastTimestamp.Unix()
 			params.Start = &start
+		} else if info.Start > 0 {
+			params.Start = &info.Start
+		}
+		if info.End > 0 {
+			params.End = &info.End
 		}
 
 		metrics, mErr := sb.GetMetrics(ctx, params)

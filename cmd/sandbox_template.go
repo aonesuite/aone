@@ -28,6 +28,7 @@ func newTemplateCmd() *cobra.Command {
 		newTemplateDeleteCmd(),
 		buildCmd,
 		newTemplateBuildsCmd(),
+		newTemplateLogsCmd(),
 		newTemplatePublishCmd(true),
 		newTemplatePublishCmd(false),
 		newTemplateInitCmd(),
@@ -47,6 +48,11 @@ func newTemplateListCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&info.Format, "format", "pretty", "output format: pretty or json")
+	cmd.Flags().StringVar(&info.Name, "name", "", "filter by template name")
+	cmd.Flags().StringVar(&info.BuildStatus, "build-status", "", "filter by latest build status")
+	cmd.Flags().StringVar(&info.Public, "public", "", "filter by visibility (true or false)")
+	cmd.Flags().StringVar(&info.Cursor, "cursor", "", "pagination cursor returned by the API")
+	cmd.Flags().Int32Var(&info.Limit, "limit", 0, "maximum number of templates to return")
 	return cmd
 }
 
@@ -92,6 +98,28 @@ func newTemplateBuildsCmd() *cobra.Command {
 	}
 }
 
+func newTemplateLogsCmd() *cobra.Command {
+	info := template.LogsInfo{}
+	cmd := &cobra.Command{
+		Use:     "logs <templateID> <buildID>",
+		Aliases: []string{"blg"},
+		Short:   "View template build logs (alias: blg)",
+		Args:    cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			info.TemplateID = args[0]
+			info.BuildID = args[1]
+			template.Logs(info)
+		},
+	}
+	cmd.Flags().Int64Var(&info.Cursor, "cursor", 0, "build log cursor")
+	cmd.Flags().Int32Var(&info.Limit, "limit", 0, "maximum number of log entries")
+	cmd.Flags().StringVar(&info.Direction, "direction", "", "pagination direction (forward or backward)")
+	cmd.Flags().StringVar(&info.Level, "level", "", "filter by log level")
+	cmd.Flags().StringVar(&info.Source, "source", "", "filter by log source")
+	cmd.Flags().StringVar(&info.Format, "format", "pretty", "output format: pretty or json")
+	return cmd
+}
+
 func newTemplateBuildCmd() *cobra.Command {
 	info := template.BuildInfo{SaveConfig: true}
 	cmd := &cobra.Command{
@@ -103,15 +131,15 @@ func newTemplateBuildCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&info.Name, "name", "", "template name (for creating a new template)")
-	cmd.Flags().StringVar(&info.TemplateID, "template-id", "", "existing template ID (for rebuilding)")
 	cmd.Flags().StringVar(&info.FromImage, "from-image", "", "base Docker image")
 	cmd.Flags().StringVar(&info.FromTemplate, "from-template", "", "base template")
 	cmd.Flags().StringVar(&info.StartCmd, "start-cmd", "", "command to run after build")
 	cmd.Flags().StringVar(&info.ReadyCmd, "ready-cmd", "", "readiness check command")
 	cmd.Flags().Int32Var(&info.CPUCount, "cpu", 0, "sandbox CPU count")
 	cmd.Flags().Int32Var(&info.MemoryMB, "memory", 0, "sandbox memory size in MiB")
+	cmd.Flags().Int32Var(&info.DiskSizeMB, "disk-size-mb", 0, "sandbox disk size in MiB")
+	cmd.Flags().StringVar(&info.Public, "public", "", "set template visibility (true or false)")
 	cmd.Flags().BoolVar(&info.Wait, "wait", false, "wait for build to complete")
-	cmd.Flags().BoolVar(&info.NoCache, "no-cache", false, "force full rebuild ignoring cache")
 	cmd.Flags().StringVar(&info.Dockerfile, "dockerfile", "", "path to Dockerfile")
 	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root (defaults to current directory)")
 	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
@@ -180,7 +208,8 @@ func newTemplateCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&info.ReadyCmd, "ready-cmd", "", "readiness check command")
 	cmd.Flags().Int32Var(&info.CPUCount, "cpu-count", 0, "sandbox CPU count")
 	cmd.Flags().Int32Var(&info.MemoryMB, "memory-mb", 0, "sandbox memory in MiB")
-	cmd.Flags().BoolVar(&info.NoCache, "no-cache", false, "skip cache when building")
+	cmd.Flags().Int32Var(&info.DiskSizeMB, "disk-size-mb", 0, "sandbox disk size in MiB")
+	cmd.Flags().StringVar(&info.Public, "public", "", "set template visibility (true or false)")
 	return cmd
 }
 

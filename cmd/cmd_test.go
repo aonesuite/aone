@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -82,7 +85,7 @@ func TestRoot_HelpListsAllSubcommandGroups(t *testing.T) {
 		t.Fatalf("execute --help: %v", err)
 	}
 	got := out.String()
-	for _, want := range []string{"auth", "sandbox", "Account & configuration", "Sandbox management"} {
+	for _, want := range []string{"auth", "sandbox", "tts", "Account & configuration", "Sandbox management", "Media"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("--help output missing %q; got:\n%s", want, got)
 		}
@@ -190,7 +193,7 @@ func TestRoot_StdoutNotPollutedByDebugLogs(t *testing.T) {
 // and pass values through to instance.List.
 func TestSandboxList_FlagsBindToInfo(t *testing.T) {
 	isolateConfig(t)
-	rootCmd.SetArgs([]string{"sandbox", "list", "-f", "json", "-l", "5", "-s", "running"})
+	rootCmd.SetArgs([]string{"sandbox", "list", "-f", "json", "-l", "5", "-s", "running", "--cursor", "cur"})
 	stderr := captureStderr(t, func() {
 		_ = captureStdout(t, func() {
 			_ = rootCmd.Execute()
@@ -200,6 +203,26 @@ func TestSandboxList_FlagsBindToInfo(t *testing.T) {
 	// fine (no "unknown flag" message) and we got the resolver error.
 	if strings.Contains(stderr, "unknown flag") {
 		t.Fatalf("flags did not bind correctly: %q", stderr)
+	}
+}
+
+func TestSandboxCreate_NetworkFlagsBind(t *testing.T) {
+	cmd := newSandboxCreateCmd()
+	args := []string{
+		"--secure=false",
+		"--allow-internet-access", "true",
+		"--allow-out", "api.example.com",
+		"--deny-out", "169.254.169.254",
+		"--allow-public-traffic", "false",
+		"--mask-request-host", "masked.example",
+	}
+	if err := cmd.ParseFlags(args); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	for _, name := range []string{"secure", "allow-internet-access", "allow-out", "deny-out", "allow-public-traffic", "mask-request-host"} {
+		if got := cmd.Flags().Lookup(name); got == nil {
+			t.Fatalf("%s flag not registered", name)
+		}
 	}
 }
 
@@ -228,6 +251,122 @@ func TestTemplateMigrate_ConfigFlagBinds(t *testing.T) {
 			t.Fatalf("config flag not registered")
 		}
 		t.Fatalf("config flag = %q, want /tmp/aone.sandbox.toml", got.Value.String())
+	}
+}
+
+func TestTemplateList_FilterFlagsBind(t *testing.T) {
+	cmd := newTemplateListCmd()
+	args := []string{
+		"--name", "demo",
+		"--build-status", "ready",
+		"--public", "true",
+		"--cursor", "cur-1",
+		"--limit", "10",
+	}
+	if err := cmd.ParseFlags(args); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	for _, name := range []string{"name", "build-status", "public", "cursor", "limit"} {
+		if got := cmd.Flags().Lookup(name); got == nil {
+			t.Fatalf("%s flag not registered", name)
+		}
+	}
+	if got := cmd.Flags().Lookup("api-key-id"); got != nil {
+		t.Fatalf("api-key-id flag should not be registered")
+	}
+}
+
+func TestTemplateBuild_RemovesUnsupportedFlags(t *testing.T) {
+	cmd := newTemplateBuildCmd()
+	for _, name := range []string{"template-id", "no-cache"} {
+		if got := cmd.Flags().Lookup(name); got != nil {
+			t.Fatalf("%s flag should not be registered", name)
+		}
+	}
+}
+
+func TestTemplateCreate_ResourceFlagsBind(t *testing.T) {
+	cmd := newTemplateCreateCmd()
+	args := []string{"--disk-size-mb", "8192", "--public", "true"}
+	if err := cmd.ParseFlags(args); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	for _, name := range []string{"disk-size-mb", "public"} {
+		if got := cmd.Flags().Lookup(name); got == nil {
+			t.Fatalf("%s flag not registered", name)
+		}
+	}
+}
+
+func TestTTSVoices_PrintsVoiceTable(t *testing.T) {
+	isolateConfig(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tts/voices" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"voices": []map[string]any{{
+				"id":       "voice-1",
+				"name":     "Demo",
+				"language": "en",
+				"gender":   "neutral",
+				"scenario": "assistant",
+			}},
+		})
+	}))
+	defer srv.Close()
+	t.Setenv(config.EnvAPIKey, "test-key")
+	t.Setenv(config.EnvEndpoint, srv.URL)
+
+	rootCmd.SetArgs([]string{"tts", "voices"})
+	out := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("tts voices: %v", err)
+			}
+		})
+	})
+	if !strings.Contains(out, "voice-1") || !strings.Contains(out, "Demo") {
+		t.Fatalf("tts voices output = %q", out)
+	}
+}
+
+func TestTTSSpeech_SendsSynthesizeRequest(t *testing.T) {
+	isolateConfig(t)
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tts/speech" {
+			http.NotFound(w, r)
+			return
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"audio_url":   "https://audio.example/out.mp3",
+			"duration_ms": 1234,
+		})
+	}))
+	defer srv.Close()
+	t.Setenv(config.EnvAPIKey, "test-key")
+	t.Setenv(config.EnvEndpoint, srv.URL)
+
+	rootCmd.SetArgs([]string{"tts", "speech", "--text", "hello", "--voice", "voice-1", "--audio-format", "mp3", "--speed", "1.1"})
+	out := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("tts speech: %v", err)
+			}
+		})
+	})
+	if body["text"] != "hello" || body["voice"] != "voice-1" || body["format"] != "mp3" {
+		t.Fatalf("request body = %#v", body)
+	}
+	if !strings.Contains(out, "https://audio.example/out.mp3") {
+		t.Fatalf("tts speech output = %q", out)
 	}
 }
 

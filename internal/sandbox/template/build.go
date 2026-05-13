@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/aonesuite/aone/internal/config"
@@ -17,9 +18,6 @@ import (
 type BuildInfo struct {
 	// Name is the template name used when creating and building a template.
 	Name string
-
-	// TemplateID is an existing template ID used for rebuilds.
-	TemplateID string
 
 	// FromImage is the base Docker image.
 	FromImage string
@@ -39,12 +37,14 @@ type BuildInfo struct {
 	// MemoryMB is the sandbox memory size in MiB.
 	MemoryMB int32
 
+	// DiskSizeMB is the sandbox disk size in MiB.
+	DiskSizeMB int32
+
+	// Public controls template visibility. Empty means use the server default.
+	Public string
+
 	// Wait indicates whether to wait for build completion.
 	Wait bool
-
-	// NoCache is retained for CLI compatibility but ignored by the current
-	// OpenAPI-backed create-template flow.
-	NoCache bool
 
 	// Dockerfile is the Dockerfile path and enables v2 Dockerfile builds.
 	Dockerfile string
@@ -96,10 +96,6 @@ func Build(info BuildInfo) {
 	}
 
 	ctx := context.Background()
-	if info.TemplateID != "" {
-		sbClient.PrintError("rebuilding an existing template is not available in the OpenAPI contract")
-		return
-	}
 	if info.Name == "" {
 		sbClient.PrintError("template name (--name) is required")
 		return
@@ -119,6 +115,17 @@ func Build(info BuildInfo) {
 	}
 	if info.MemoryMB > 0 {
 		createParams.MemoryMB = &info.MemoryMB
+	}
+	if info.DiskSizeMB > 0 {
+		createParams.DiskSizeMB = &info.DiskSizeMB
+	}
+	if info.Public != "" {
+		public, pErr := strconv.ParseBool(info.Public)
+		if pErr != nil {
+			sbClient.PrintError("--public must be true or false")
+			return
+		}
+		createParams.Public = &public
 	}
 	if info.Dockerfile != "" {
 		content, rErr := os.ReadFile(info.Dockerfile)
@@ -225,9 +232,6 @@ func stringPtrFromNonEmpty(v string) *string {
 // applyProjectDefaults fills in BuildInfo fields that are still zero from
 // the loaded project config. Flag/CLI-supplied values are never overridden.
 func applyProjectDefaults(info *BuildInfo, p *config.Project) {
-	if info.TemplateID == "" {
-		info.TemplateID = p.TemplateID
-	}
 	if info.Name == "" {
 		info.Name = p.TemplateName
 	}
@@ -245,6 +249,12 @@ func applyProjectDefaults(info *BuildInfo, p *config.Project) {
 	}
 	if info.MemoryMB == 0 && p.MemoryMB > 0 {
 		info.MemoryMB = int32(p.MemoryMB)
+	}
+	if info.DiskSizeMB == 0 && p.DiskSizeMB > 0 {
+		info.DiskSizeMB = int32(p.DiskSizeMB)
+	}
+	if info.Public == "" && p.Public != nil {
+		info.Public = strconv.FormatBool(*p.Public)
 	}
 }
 
@@ -286,6 +296,15 @@ func saveProjectFromBuild(info BuildInfo, loc *config.ProjectLocation, templateI
 	}
 	if info.MemoryMB > 0 {
 		existing.MemoryMB = int(info.MemoryMB)
+	}
+	if info.DiskSizeMB > 0 {
+		existing.DiskSizeMB = int(info.DiskSizeMB)
+	}
+	if info.Public != "" {
+		public, err := strconv.ParseBool(info.Public)
+		if err == nil {
+			existing.Public = &public
+		}
 	}
 	return config.SaveProject(existing, dest)
 }

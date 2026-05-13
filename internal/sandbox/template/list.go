@@ -5,12 +5,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aonesuite/aone/packages/go/sandbox"
+
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
 )
 
 // ListInfo holds parameters for listing templates.
 type ListInfo struct {
-	Format string // pretty or json
+	Name        string
+	BuildStatus string
+	Public      string
+	Cursor      string
+	Limit       int32
+	Format      string // pretty or json
 }
 
 // List lists all templates.
@@ -21,7 +28,24 @@ func List(info ListInfo) {
 		return
 	}
 
-	templates, err := client.ListTemplates(context.Background(), nil)
+	params := &sandbox.ListTemplatesParams{}
+	if info.Name != "" {
+		params.Name = &info.Name
+	}
+	if info.BuildStatus != "" {
+		params.BuildStatus = &info.BuildStatus
+	}
+	if info.Public != "" {
+		params.Public = &info.Public
+	}
+	if info.Cursor != "" {
+		params.Cursor = &info.Cursor
+	}
+	if info.Limit > 0 {
+		params.Limit = &info.Limit
+	}
+
+	templates, err := client.ListTemplates(context.Background(), params)
 	if err != nil {
 		sbClient.PrintError("list templates failed: %v", err)
 		return

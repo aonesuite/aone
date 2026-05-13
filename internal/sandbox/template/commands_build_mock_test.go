@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,6 +39,49 @@ func TestBuild_FromImage_NoWait(t *testing.T) {
 	})
 	if !sawRequest(srv, "POST", "/api/v1/sbx/templates") {
 		t.Fatalf("expected POST /api/v1/sbx/templates; got %+v", srv.Requests())
+	}
+}
+
+func TestBuild_MapsResourceAndVisibilityFields(t *testing.T) {
+	srv := withMock(t)
+	_ = captureStdout(t, func() {
+		Build(BuildInfo{
+			Name:       "demo",
+			FromImage:  "alpine:3.20",
+			CPUCount:   2,
+			MemoryMB:   1024,
+			DiskSizeMB: 8192,
+			Public:     "true",
+			Path:       t.TempDir(),
+		})
+	})
+	reqs := srv.RequestsFor("POST", "/api/v1/sbx/templates")
+	if len(reqs) != 1 {
+		t.Fatalf("expected one template create request; got %+v", srv.Requests())
+	}
+	var body map[string]any
+	if err := json.Unmarshal([]byte(reqs[0].Body), &body); err != nil {
+		t.Fatalf("decode request body: %v", err)
+	}
+	if body["cpu_count"] != float64(2) || body["memory_mb"] != float64(1024) || body["disk_size_mb"] != float64(8192) || body["public"] != true {
+		t.Fatalf("unexpected request body: %#v", body)
+	}
+}
+
+func TestBuild_InvalidPublicFlagErrors(t *testing.T) {
+	withMock(t)
+	stderr := captureStderr(t, func() {
+		_ = captureStdout(t, func() {
+			Build(BuildInfo{
+				Name:      "demo",
+				FromImage: "alpine:3.20",
+				Public:    "maybe",
+				Path:      t.TempDir(),
+			})
+		})
+	})
+	if !strings.Contains(stderr, "--public must be true or false") {
+		t.Fatalf("stderr = %q", stderr)
 	}
 }
 
@@ -93,22 +137,6 @@ func TestBuild_FromImage_WaitBuildError(t *testing.T) {
 		})
 	})
 	if !strings.Contains(stderr, "build failed") {
-		t.Fatalf("stderr = %q", stderr)
-	}
-}
-
-func TestBuild_ExistingTemplate_RebuildUnsupported(t *testing.T) {
-	withMock(t)
-	stderr := captureStderr(t, func() {
-		_ = captureStdout(t, func() {
-			Build(BuildInfo{
-				TemplateID: "tpl-existing",
-				FromImage:  "alpine:3.20",
-				Path:       t.TempDir(),
-			})
-		})
-	})
-	if !strings.Contains(stderr, "rebuilding an existing template is not available in the OpenAPI contract") {
 		t.Fatalf("stderr = %q", stderr)
 	}
 }

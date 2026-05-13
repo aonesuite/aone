@@ -26,8 +26,8 @@ func newSandboxListCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&info.State, "state", "s", "", "filter by state (comma-separated: running,paused). Defaults to running")
-	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "filter by metadata (key1=value1,key2=value2)")
 	cmd.Flags().Int32VarP(&info.Limit, "limit", "l", 0, "maximum number of sandboxes to return; 0 uses the server default")
+	cmd.Flags().StringVar(&info.NextToken, "cursor", "", "pagination cursor returned by the API")
 	cmd.Flags().StringVarP(&info.Format, "format", "f", "pretty", "output format: pretty or json")
 	return cmd
 }
@@ -43,6 +43,7 @@ func newSandboxCreateCmd() *cobra.Command {
 			if len(args) > 0 {
 				info.TemplateID = args[0]
 			}
+			info.SecureSet = cmd.Flags().Changed("secure")
 			instance.Create(info)
 		},
 	}
@@ -50,6 +51,12 @@ func newSandboxCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&info.Detach, "detach", false, "create sandbox without connecting terminal")
 	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "metadata key=value pairs (comma-separated)")
 	cmd.Flags().StringArrayVarP(&info.EnvVars, "env-var", "e", nil, "environment variables (KEY=VALUE, can be specified multiple times)")
+	cmd.Flags().BoolVar(&info.Secure, "secure", true, "enable secure isolation when supported")
+	cmd.Flags().StringVar(&info.AllowInternetAccess, "allow-internet-access", "", "set broad outbound internet access (true or false)")
+	cmd.Flags().StringArrayVar(&info.AllowOut, "allow-out", nil, "network destinations to allow (can be specified multiple times)")
+	cmd.Flags().StringArrayVar(&info.DenyOut, "deny-out", nil, "network destinations to deny (can be specified multiple times)")
+	cmd.Flags().StringVar(&info.AllowPublicTraffic, "allow-public-traffic", "", "set network policy public traffic access (true or false)")
+	cmd.Flags().StringVar(&info.MaskRequestHost, "mask-request-host", "", "network policy request host mask")
 	cmd.Flags().StringVar(&info.ConfigPath, "config", "", "path to aone.sandbox.toml (overrides --path lookup)")
 	cmd.Flags().StringVarP(&info.Path, "path", "p", "", "project root used to locate aone.sandbox.toml")
 	return cmd
@@ -80,7 +87,6 @@ func newSandboxKillCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&info.All, "all", "a", false, "kill all sandboxes")
 	cmd.Flags().StringVarP(&info.State, "state", "s", "", "filter by state when using --all")
-	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "filter by metadata when using --all")
 	return cmd
 }
 
@@ -122,6 +128,7 @@ func newSandboxLogsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&info.Level, "level", "INFO", "filter by log level (DEBUG, INFO, WARN, ERROR)")
 	cmd.Flags().Int32Var(&info.Limit, "limit", 0, "maximum number of log entries")
+	cmd.Flags().Int64Var(&info.Start, "start", 0, "start Unix timestamp or API log cursor")
 	cmd.Flags().StringVar(&info.Format, "format", "pretty", "output format: pretty or json")
 	cmd.Flags().BoolVarP(&info.Follow, "follow", "f", false, "keep streaming logs")
 	cmd.Flags().StringVar(&info.Loggers, "loggers", "", "filter logs by logger prefixes")
@@ -142,6 +149,8 @@ func newSandboxMetricsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&info.Format, "format", "pretty", "output format: pretty or json")
 	cmd.Flags().BoolVarP(&info.Follow, "follow", "f", false, "keep streaming metrics")
+	cmd.Flags().Int64Var(&info.Start, "start", 0, "inclusive Unix timestamp lower bound")
+	cmd.Flags().Int64Var(&info.End, "end", 0, "inclusive Unix timestamp upper bound")
 	return cmd
 }
 

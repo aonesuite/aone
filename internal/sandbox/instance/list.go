@@ -12,10 +12,10 @@ import (
 
 // ListInfo holds parameters for listing sandboxes.
 type ListInfo struct {
-	State    string // Comma-separated states: running,paused
-	Metadata string // Metadata filter: key=value
-	Limit    int32
-	Format   string // pretty or json
+	State     string // Comma-separated states: running,paused
+	Limit     int32
+	NextToken string
+	Format    string // pretty or json
 }
 
 // List lists sandboxes with optional filters.
@@ -35,14 +35,11 @@ func List(info ListInfo) {
 	states := sbClient.ParseStates(stateStr)
 	params.State = &states
 
-	if info.Metadata != "" {
-		m := sbClient.ParseMetadata(info.Metadata)
-		if m != "" {
-			params.Metadata = &m
-		}
-	}
 	if info.Limit > 0 {
 		params.Limit = &info.Limit
+	}
+	if info.NextToken != "" {
+		params.NextToken = &info.NextToken
 	}
 
 	sandboxes, err := client.List(context.Background(), params)

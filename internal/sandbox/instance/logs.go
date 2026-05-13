@@ -19,6 +19,7 @@ type LogsInfo struct {
 	SandboxID string
 	Level     string // Log level filter: DEBUG, INFO, WARN, ERROR (default: INFO)
 	Limit     int32
+	Start     int64
 	Format    string // pretty or json
 	Follow    bool   // Keep streaming logs until sandbox is closed
 	Loggers   string // Comma-separated logger name prefixes to filter
@@ -86,6 +87,9 @@ func Logs(info LogsInfo) {
 	}
 
 	var start *int64
+	if info.Start > 0 {
+		start = &info.Start
+	}
 
 	for {
 		params := &sandbox.GetLogsParams{

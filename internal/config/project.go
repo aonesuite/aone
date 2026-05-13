@@ -46,6 +46,12 @@ type Project struct {
 
 	// MemoryMB is the requested memory in MiB.
 	MemoryMB int `toml:"memory_mb,omitempty"`
+
+	// DiskSizeMB is the requested disk size in MiB.
+	DiskSizeMB int `toml:"disk_size_mb,omitempty"`
+
+	// Public controls template visibility. Nil means "use server default".
+	Public *bool `toml:"public,omitempty"`
 }
 
 // ProjectLocation describes where a Project was loaded from. Useful for

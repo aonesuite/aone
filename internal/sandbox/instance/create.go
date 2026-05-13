@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aonesuite/aone/packages/go/sandbox"
@@ -13,11 +14,18 @@ import (
 
 // CreateInfo holds parameters for creating a sandbox.
 type CreateInfo struct {
-	TemplateID string
-	Timeout    int32
-	Metadata   string
-	Detach     bool
-	EnvVars    []string // KEY=VALUE pairs
+	TemplateID          string
+	Timeout             int32
+	Metadata            string
+	Detach              bool
+	EnvVars             []string // KEY=VALUE pairs
+	Secure              bool
+	SecureSet           bool
+	AllowInternetAccess string
+	AllowOut            []string
+	DenyOut             []string
+	AllowPublicTraffic  string
+	MaskRequestHost     string
 
 	// ConfigPath optionally points at an explicit aone.sandbox.toml. When
 	// empty, the file is looked up under Path (or CWD).
@@ -54,10 +62,42 @@ func Create(info CreateInfo) {
 	}
 
 	ctx := context.Background()
-	secure := true
+	secure := info.Secure
+	if !info.SecureSet && !secure {
+		secure = true
+	}
 	params := sandbox.CreateParams{
 		TemplateID: info.TemplateID,
 		Secure:     &secure,
+	}
+	if info.AllowInternetAccess != "" {
+		allow, pErr := strconv.ParseBool(info.AllowInternetAccess)
+		if pErr != nil {
+			sbClient.PrintError("--allow-internet-access must be true or false")
+			return
+		}
+		params.AllowInternetAccess = &allow
+	}
+	network := sandbox.NetworkConfig{}
+	if len(info.AllowOut) > 0 {
+		network.AllowOut = &info.AllowOut
+	}
+	if len(info.DenyOut) > 0 {
+		network.DenyOut = &info.DenyOut
+	}
+	if info.MaskRequestHost != "" {
+		network.MaskRequestHost = &info.MaskRequestHost
+	}
+	if info.AllowPublicTraffic != "" {
+		allow, pErr := strconv.ParseBool(info.AllowPublicTraffic)
+		if pErr != nil {
+			sbClient.PrintError("--allow-public-traffic must be true or false")
+			return
+		}
+		network.AllowPublicTraffic = &allow
+	}
+	if network.AllowOut != nil || network.DenyOut != nil || network.MaskRequestHost != nil || network.AllowPublicTraffic != nil {
+		params.Network = &network
 	}
 	if info.Timeout > 0 {
 		params.Timeout = &info.Timeout
