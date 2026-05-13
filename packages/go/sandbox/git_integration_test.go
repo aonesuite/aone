@@ -8,18 +8,20 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aonesuite/aone/packages/go/internal/sdkconfig"
 )
 
 func TestIntegrationGitLocalRemoteAndCredentialCleanup(t *testing.T) {
-	apiKey := strings.TrimSpace(os.Getenv(EnvAPIKey))
+	apiKey := strings.TrimSpace(os.Getenv(sdkconfig.EnvAPIKey))
 	if apiKey == "" {
-		t.Skipf("%s is required for integration tests", EnvAPIKey)
+		t.Skipf("%s is required for integration tests", sdkconfig.EnvAPIKey)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	client, err := NewClient(&Config{APIKey: apiKey, Endpoint: os.Getenv(EnvEndpoint)})
+	client, err := NewClient(&Config{APIKey: apiKey, Endpoint: os.Getenv(sdkconfig.EnvEndpoint)})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}

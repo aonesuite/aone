@@ -29,8 +29,8 @@ func TestResolve_DefaultsWhenNothingProvided(t *testing.T) {
 	if got.APIKey != "" || got.APIKeySource != SourceNone {
 		t.Fatalf("APIKey = %q (%s), want empty/SourceNone", got.APIKey, got.APIKeySource)
 	}
-	if got.Endpoint != DefaultEndpoint || got.EndpointSource != SourceDefault {
-		t.Fatalf("Endpoint = %q (%s), want default %q", got.Endpoint, got.EndpointSource, DefaultEndpoint)
+	if got.Endpoint != "https://api.aonesuite.com" || got.EndpointSource != SourceDefault {
+		t.Fatalf("Endpoint = %q (%s), want default https://api.aonesuite.com", got.Endpoint, got.EndpointSource)
 	}
 }
 

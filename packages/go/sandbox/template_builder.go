@@ -69,6 +69,7 @@ func NewTemplate() *TemplateBuilder {
 	return &TemplateBuilder{fromImage: &base}
 }
 
+// FromDebianImage starts the template from a Debian image variant.
 func (t *TemplateBuilder) FromDebianImage(variant string) *TemplateBuilder {
 	if variant == "" {
 		variant = "stable"
@@ -76,6 +77,7 @@ func (t *TemplateBuilder) FromDebianImage(variant string) *TemplateBuilder {
 	return t.FromImage("debian:" + variant)
 }
 
+// FromUbuntuImage starts the template from an Ubuntu image variant.
 func (t *TemplateBuilder) FromUbuntuImage(variant string) *TemplateBuilder {
 	if variant == "" {
 		variant = "latest"
@@ -83,6 +85,7 @@ func (t *TemplateBuilder) FromUbuntuImage(variant string) *TemplateBuilder {
 	return t.FromImage("ubuntu:" + variant)
 }
 
+// FromPythonImage starts the template from a Python image version.
 func (t *TemplateBuilder) FromPythonImage(version string) *TemplateBuilder {
 	if version == "" {
 		version = "3"
@@ -90,6 +93,7 @@ func (t *TemplateBuilder) FromPythonImage(version string) *TemplateBuilder {
 	return t.FromImage("python:" + version)
 }
 
+// FromNodeImage starts the template from a Node.js image variant.
 func (t *TemplateBuilder) FromNodeImage(variant string) *TemplateBuilder {
 	if variant == "" {
 		variant = "lts"
@@ -97,6 +101,7 @@ func (t *TemplateBuilder) FromNodeImage(variant string) *TemplateBuilder {
 	return t.FromImage("node:" + variant)
 }
 
+// FromBunImage starts the template from an oven/bun image variant.
 func (t *TemplateBuilder) FromBunImage(variant string) *TemplateBuilder {
 	if variant == "" {
 		variant = "latest"
@@ -104,10 +109,12 @@ func (t *TemplateBuilder) FromBunImage(variant string) *TemplateBuilder {
 	return t.FromImage("oven/bun:" + variant)
 }
 
+// FromBaseImage starts the template from the default Aone base image.
 func (t *TemplateBuilder) FromBaseImage() *TemplateBuilder {
 	return t.FromImage("base")
 }
 
+// FromImage starts the template from a container image.
 func (t *TemplateBuilder) FromImage(image string) *TemplateBuilder {
 	t.fromImage = &image
 	t.fromTemplate = nil
@@ -115,6 +122,7 @@ func (t *TemplateBuilder) FromImage(image string) *TemplateBuilder {
 	return t
 }
 
+// FromTemplate starts the template from an existing Aone template.
 func (t *TemplateBuilder) FromTemplate(template string) *TemplateBuilder {
 	t.fromTemplate = &template
 	t.fromImage = nil
@@ -180,16 +188,19 @@ func (t *TemplateBuilder) FromGCPRegistry(image, serviceAccountJSON string) *Tem
 	return t
 }
 
+// AddStep appends a raw template build step.
 func (t *TemplateBuilder) AddStep(stepType string, args ...string) *TemplateBuilder {
 	force := t.force
 	t.steps = append(t.steps, TemplateStep{Type: stepType, Args: &args, Force: &force})
 	return t
 }
 
+// Copy appends a COPY step from the build context into the template.
 func (t *TemplateBuilder) Copy(src, dest string) *TemplateBuilder {
 	return t.AddStep("COPY", src, dest)
 }
 
+// CopyItems appends COPY steps for each item.
 func (t *TemplateBuilder) CopyItems(items []CopyItem) *TemplateBuilder {
 	for _, item := range items {
 		t.Copy(item.Src, item.Dest)
@@ -197,11 +208,13 @@ func (t *TemplateBuilder) CopyItems(items []CopyItem) *TemplateBuilder {
 	return t
 }
 
+// CopyItem describes one source and destination pair for CopyItems.
 type CopyItem struct {
 	Src  string
 	Dest string
 }
 
+// Remove appends an rm command for a path inside the template.
 func (t *TemplateBuilder) Remove(path string, recursive, force bool, user string) *TemplateBuilder {
 	args := []string{"rm"}
 	if recursive {
@@ -214,14 +227,17 @@ func (t *TemplateBuilder) Remove(path string, recursive, force bool, user string
 	return t.runCmdAs(strings.Join(args, " "), user)
 }
 
+// Rename appends an mv command for a path inside the template.
 func (t *TemplateBuilder) Rename(src, dest, user string) *TemplateBuilder {
 	return t.runCmdAs("mv "+shellQuote(src)+" "+shellQuote(dest), user)
 }
 
+// MakeDir appends a mkdir -p command for a path inside the template.
 func (t *TemplateBuilder) MakeDir(path, user string) *TemplateBuilder {
 	return t.runCmdAs("mkdir -p "+shellQuote(path), user)
 }
 
+// MakeSymlink appends an ln -s command for a path inside the template.
 func (t *TemplateBuilder) MakeSymlink(src, dest, user string, force bool) *TemplateBuilder {
 	flag := ""
 	if force {
@@ -230,6 +246,7 @@ func (t *TemplateBuilder) MakeSymlink(src, dest, user string, force bool) *Templ
 	return t.runCmdAs("ln -s "+flag+shellQuote(src)+" "+shellQuote(dest), user)
 }
 
+// RunCmd appends a RUN step.
 func (t *TemplateBuilder) RunCmd(cmd string) *TemplateBuilder {
 	return t.runCmdAs(cmd, "")
 }
@@ -241,14 +258,17 @@ func (t *TemplateBuilder) runCmdAs(cmd, user string) *TemplateBuilder {
 	return t.AddStep("RUN", cmd)
 }
 
+// SetWorkdir appends a WORKDIR step.
 func (t *TemplateBuilder) SetWorkdir(workdir string) *TemplateBuilder {
 	return t.AddStep("WORKDIR", workdir)
 }
 
+// SetUser appends a USER step.
 func (t *TemplateBuilder) SetUser(user string) *TemplateBuilder {
 	return t.AddStep("USER", user)
 }
 
+// PipInstall appends a pip install command.
 func (t *TemplateBuilder) PipInstall(packages ...string) *TemplateBuilder {
 	if len(packages) == 0 {
 		return t.RunCmd("pip install .")
@@ -256,6 +276,7 @@ func (t *TemplateBuilder) PipInstall(packages ...string) *TemplateBuilder {
 	return t.RunCmd("pip install " + strings.Join(quoteAll(packages), " "))
 }
 
+// NpmInstall appends an npm install command.
 func (t *TemplateBuilder) NpmInstall(packages ...string) *TemplateBuilder {
 	if len(packages) == 0 {
 		return t.RunCmd("npm install")
@@ -263,6 +284,7 @@ func (t *TemplateBuilder) NpmInstall(packages ...string) *TemplateBuilder {
 	return t.RunCmd("npm install " + strings.Join(quoteAll(packages), " "))
 }
 
+// BunInstall appends a bun install or bun add command.
 func (t *TemplateBuilder) BunInstall(packages ...string) *TemplateBuilder {
 	if len(packages) == 0 {
 		return t.RunCmd("bun install")
@@ -270,10 +292,12 @@ func (t *TemplateBuilder) BunInstall(packages ...string) *TemplateBuilder {
 	return t.RunCmd("bun add " + strings.Join(quoteAll(packages), " "))
 }
 
+// AptInstall appends apt-get update and apt-get install commands.
 func (t *TemplateBuilder) AptInstall(packages ...string) *TemplateBuilder {
 	return t.RunCmd("apt-get update && apt-get install -y " + strings.Join(quoteAll(packages), " "))
 }
 
+// GitClone appends a git clone command.
 func (t *TemplateBuilder) GitClone(repoURL, dest string) *TemplateBuilder {
 	cmd := "git clone " + shellQuote(repoURL)
 	if dest != "" {
@@ -282,6 +306,7 @@ func (t *TemplateBuilder) GitClone(repoURL, dest string) *TemplateBuilder {
 	return t.RunCmd(cmd)
 }
 
+// SetEnvs appends ENV steps for each key-value pair.
 func (t *TemplateBuilder) SetEnvs(envs map[string]string) *TemplateBuilder {
 	for k, v := range envs {
 		t.AddStep("ENV", k+"="+v)
@@ -302,6 +327,7 @@ func (t *TemplateBuilder) AddMcpServer(servers ...string) *TemplateBuilder {
 	return t
 }
 
+// SkipCache marks subsequent steps as cache-bypassing.
 func (t *TemplateBuilder) SkipCache() *TemplateBuilder {
 	t.force = true
 	return t
@@ -350,6 +376,7 @@ func (t *TemplateBuilder) ContextPath() string { return t.contextPath }
 // The slice is owned by the builder; callers must not modify it.
 func (t *TemplateBuilder) IgnorePatterns() []string { return t.ignorePatterns }
 
+// SetStartCmd sets the template startup command and readiness check.
 func (t *TemplateBuilder) SetStartCmd(start string, ready ReadyCmd) *TemplateBuilder {
 	t.startCmd = &start
 	cmd := ready.String()
@@ -357,6 +384,7 @@ func (t *TemplateBuilder) SetStartCmd(start string, ready ReadyCmd) *TemplateBui
 	return t
 }
 
+// SetReadyCmd sets the template readiness check without changing the startup command.
 func (t *TemplateBuilder) SetReadyCmd(ready ReadyCmd) *TemplateBuilder {
 	cmd := ready.String()
 	t.readyCmd = &cmd
@@ -427,6 +455,7 @@ func (t *TemplateBuilder) BuildInBackground(ctx context.Context, c *Client, name
 	}, nil
 }
 
+// BuildTemplateOptions customizes TemplateBuilder build requests.
 type BuildTemplateOptions struct {
 	Tags      []string
 	CPUCount  *int32
@@ -434,6 +463,7 @@ type BuildTemplateOptions struct {
 	SkipCache bool
 }
 
+// BuildInfo identifies a template build started by TemplateBuilder.
 type BuildInfo struct {
 	Name       string
 	TemplateID string

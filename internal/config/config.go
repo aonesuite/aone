@@ -28,8 +28,8 @@ const (
 	// EnvAPIKey is the environment variable holding the API key. It takes
 	// priority over any value persisted in the user config file.
 	EnvAPIKey = "AONE_API_KEY"
-	// EnvEndpoint overrides the control-plane endpoint URL.
-	EnvEndpoint = "AONE_SANDBOX_API_URL"
+	// EnvEndpoint overrides the Aone API endpoint URL.
+	EnvEndpoint = "AONE_API_URL"
 	// EnvDebug enables verbose SDK debug logging when truthy ("1"/"true").
 	EnvDebug = "AONE_DEBUG"
 	// EnvConfigHome overrides the user-level config directory. Useful in
@@ -47,7 +47,7 @@ const configFileName = "config.json"
 // The file is owned by the CLI; users may edit it manually but unrecognized
 // fields are preserved across writes via Extra.
 type File struct {
-	// Endpoint is the control-plane base URL (e.g. https://sandbox.aonesuite.com).
+	// Endpoint is the Aone API base URL (e.g. https://api.aonesuite.com).
 	Endpoint string `json:"endpoint,omitempty"`
 	// APIKey is the long-lived API key used to authenticate every request.
 	APIKey string `json:"apiKey,omitempty"`

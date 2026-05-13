@@ -294,7 +294,7 @@ func verifyCredentials() error {
 
 func init() {
 	authLoginCmd.Flags().StringVar(&authLoginAPIKey, "api-key", "", "API key to save (omit to be prompted)")
-	authLoginCmd.Flags().StringVar(&authLoginEndpoint, "endpoint", "", "control-plane endpoint to save (optional)")
+	authLoginCmd.Flags().StringVar(&authLoginEndpoint, "endpoint", "", "Aone API endpoint to save (optional)")
 	authLoginCmd.Flags().BoolVar(&authLoginNoVerify, "no-verify", false, "skip the post-save verification request")
 
 	authConfigureCmd.Flags().StringVar(&authConfigureFlagAPIKey, "api-key", "", "set API key non-interactively")

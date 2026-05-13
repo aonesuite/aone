@@ -19,9 +19,13 @@ import (
 type VolumeFileType string
 
 const (
-	VolumeFileTypeFile    VolumeFileType = "file"
-	VolumeFileTypeDir     VolumeFileType = "directory"
+	// VolumeFileTypeFile identifies a regular file.
+	VolumeFileTypeFile VolumeFileType = "file"
+	// VolumeFileTypeDir identifies a directory.
+	VolumeFileTypeDir VolumeFileType = "directory"
+	// VolumeFileTypeSymlink identifies a symbolic link.
 	VolumeFileTypeSymlink VolumeFileType = "symlink"
+	// VolumeFileTypeUnknown identifies an entry whose type is not known.
 	VolumeFileTypeUnknown VolumeFileType = "unknown"
 )
 

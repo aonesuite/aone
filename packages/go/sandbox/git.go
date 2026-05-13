@@ -100,10 +100,13 @@ type GitStatus struct {
 	FileStatus    []GitFileStatus
 }
 
+// IsClean reports whether the repository has no recorded file changes.
 func (s *GitStatus) IsClean() bool { return len(s.FileStatus) == 0 }
 
+// HasChanges reports whether the repository has staged, unstaged, or untracked changes.
 func (s *GitStatus) HasChanges() bool { return len(s.FileStatus) > 0 }
 
+// HasStaged reports whether at least one file has staged changes.
 func (s *GitStatus) HasStaged() bool {
 	for i := range s.FileStatus {
 		if s.FileStatus[i].Staged {
@@ -113,8 +116,10 @@ func (s *GitStatus) HasStaged() bool {
 	return false
 }
 
+// TotalCount returns the number of changed files reported by git status.
 func (s *GitStatus) TotalCount() int { return len(s.FileStatus) }
 
+// StagedCount returns the number of files with staged changes.
 func (s *GitStatus) StagedCount() int {
 	n := 0
 	for i := range s.FileStatus {
@@ -125,6 +130,7 @@ func (s *GitStatus) StagedCount() int {
 	return n
 }
 
+// UntrackedCount returns the number of untracked files.
 func (s *GitStatus) UntrackedCount() int {
 	n := 0
 	for i := range s.FileStatus {
@@ -153,6 +159,7 @@ type gitOpts struct {
 	commandOpts []CommandOption
 }
 
+// WithGitCommandOptions applies command execution options to git operations.
 func WithGitCommandOptions(opts ...CommandOption) GitOption {
 	return func(o *gitOpts) { o.commandOpts = append(o.commandOpts, opts...) }
 }
@@ -269,6 +276,7 @@ func (g *Git) Clone(ctx context.Context, repoURL string, opts *GitCloneOptions) 
 	return res, nil
 }
 
+// GitCloneOptions customizes Clone.
 type GitCloneOptions struct {
 	Path                        string
 	Branch                      string
@@ -387,6 +395,7 @@ type DeleteBranchOptions struct {
 	Options []GitOption
 }
 
+// Init initializes a git repository at repoPath.
 func (g *Git) Init(ctx context.Context, repoPath string, opts *InitOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &InitOptions{}
@@ -402,6 +411,7 @@ func (g *Git) Init(ctx context.Context, repoPath string, opts *InitOptions) (*Co
 	return g.run(ctx, "", args, opts.Options...)
 }
 
+// RemoteAdd adds a git remote and optionally fetches it.
 func (g *Git) RemoteAdd(ctx context.Context, repoPath, name, remoteURL string, opts *RemoteAddOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &RemoteAddOptions{}
@@ -423,6 +433,7 @@ func (g *Git) RemoteAdd(ctx context.Context, repoPath, name, remoteURL string, o
 	return result, nil
 }
 
+// RemoteGet returns the URL for a git remote, or an empty string when it is missing.
 func (g *Git) RemoteGet(ctx context.Context, repoPath, name string, opts ...GitOption) (string, error) {
 	res, err := g.run(ctx, repoPath, []string{"remote", "get-url", name}, opts...)
 	if err != nil {
@@ -435,6 +446,7 @@ func (g *Git) RemoteGet(ctx context.Context, repoPath, name string, opts ...GitO
 	return strings.TrimSpace(res.Stdout), nil
 }
 
+// Status returns parsed porcelain status for the repository.
 func (g *Git) Status(ctx context.Context, repoPath string, opts ...GitOption) (*GitStatus, error) {
 	res, err := g.run(ctx, repoPath, []string{"status", "--porcelain=1", "-b"}, opts...)
 	if err != nil {
@@ -443,6 +455,7 @@ func (g *Git) Status(ctx context.Context, repoPath string, opts ...GitOption) (*
 	return parseGitStatus(res.Stdout), nil
 }
 
+// Branches lists local branches and marks the current branch when available.
 func (g *Git) Branches(ctx context.Context, repoPath string, opts ...GitOption) (*GitBranches, error) {
 	res, err := g.run(ctx, repoPath, []string{"branch", "--format=%(refname:short)\t%(HEAD)"}, opts...)
 	if err != nil {
@@ -463,14 +476,17 @@ func (g *Git) Branches(ctx context.Context, repoPath string, opts ...GitOption) 
 	return branches, nil
 }
 
+// CreateBranch creates and checks out a new branch.
 func (g *Git) CreateBranch(ctx context.Context, repoPath, branch string, opts ...GitOption) (*CommandResult, error) {
 	return g.run(ctx, repoPath, []string{"checkout", "-b", branch}, opts...)
 }
 
+// CheckoutBranch checks out an existing branch or ref.
 func (g *Git) CheckoutBranch(ctx context.Context, repoPath, branch string, opts ...GitOption) (*CommandResult, error) {
 	return g.run(ctx, repoPath, []string{"checkout", branch}, opts...)
 }
 
+// DeleteBranch deletes a local branch.
 func (g *Git) DeleteBranch(ctx context.Context, repoPath, branch string, opts *DeleteBranchOptions) (*CommandResult, error) {
 	if branch == "" {
 		return nil, fmt.Errorf("branch is required")
@@ -485,6 +501,7 @@ func (g *Git) DeleteBranch(ctx context.Context, repoPath, branch string, opts *D
 	return g.run(ctx, repoPath, []string{"branch", flag, branch}, opts.Options...)
 }
 
+// Add stages files in the repository.
 func (g *Git) Add(ctx context.Context, repoPath string, opts *AddOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &AddOptions{}
@@ -507,6 +524,7 @@ func (g *Git) Add(ctx context.Context, repoPath string, opts *AddOptions) (*Comm
 	return g.run(ctx, repoPath, args, opts.Options...)
 }
 
+// Commit creates a commit with the supplied message.
 func (g *Git) Commit(ctx context.Context, repoPath, message string, opts *CommitOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &CommitOptions{}
@@ -525,6 +543,7 @@ func (g *Git) Commit(ctx context.Context, repoPath, message string, opts *Commit
 	return g.run(ctx, repoPath, args, opts.Options...)
 }
 
+// Reset runs git reset with the selected mode, target, or pathspecs.
 func (g *Git) Reset(ctx context.Context, repoPath string, opts *ResetOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &ResetOptions{}
@@ -551,6 +570,7 @@ func (g *Git) Reset(ctx context.Context, repoPath string, opts *ResetOptions) (*
 	return g.run(ctx, repoPath, args, opts.Options...)
 }
 
+// Restore restores paths in the index, working tree, or both.
 func (g *Git) Restore(ctx context.Context, repoPath string, opts *RestoreOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &RestoreOptions{}
@@ -649,6 +669,7 @@ func (g *Git) Pull(ctx context.Context, repoPath string, opts *PullOptions) (*Co
 	return g.runWithOptionalCredentials(ctx, "pull", repoPath, opts.Remote, opts.Username, opts.Password, opts.Options, buildArgs)
 }
 
+// SetConfig writes a git configuration value in the requested scope.
 func (g *Git) SetConfig(ctx context.Context, key, value string, opts *ConfigOptions) (*CommandResult, error) {
 	if opts == nil {
 		opts = &ConfigOptions{}
@@ -663,6 +684,7 @@ func (g *Git) SetConfig(ctx context.Context, key, value string, opts *ConfigOpti
 	return g.run(ctx, opts.RepoPath, []string{"config", "--" + string(scope), key, value}, opts.Options...)
 }
 
+// GetConfig reads a git configuration value in the requested scope.
 func (g *Git) GetConfig(ctx context.Context, key string, opts *ConfigOptions) (string, error) {
 	if opts == nil {
 		opts = &ConfigOptions{}
@@ -688,6 +710,7 @@ func (g *Git) GetConfig(ctx context.Context, key string, opts *ConfigOptions) (s
 	return strings.TrimSpace(res.Stdout), nil
 }
 
+// ConfigureUser writes user.name and user.email for future commits.
 func (g *Git) ConfigureUser(ctx context.Context, name, email string, opts *ConfigOptions) (*CommandResult, error) {
 	if name == "" {
 		return nil, fmt.Errorf("name is required")

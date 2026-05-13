@@ -23,8 +23,13 @@ const envdPort = 49983
 // DefaultUser is the sandbox user used by file, command, and PTY operations
 // when the caller does not specify a user override.
 const DefaultUser = "user"
+
+// DefaultTemplate is the template used when callers do not choose one.
 const DefaultTemplate = "base"
+
+// DefaultMCPTemplate is the template used for MCP gateway sandboxes.
 const DefaultMCPTemplate = "mcp-gateway"
+
 const mcpPort = 50005
 
 // Sandbox represents one sandbox instance and lazily initializes helpers for

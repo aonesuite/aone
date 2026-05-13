@@ -8,7 +8,7 @@
 // snapshots, and lifecycle operations.
 //
 // The SDK reads AONE_API_KEY when Config.APIKey is empty. A custom endpoint can
-// be supplied through Config.Endpoint or AONE_SANDBOX_API_URL.
+// be supplied through Config.Endpoint or AONE_API_URL.
 //
 // Basic usage:
 //

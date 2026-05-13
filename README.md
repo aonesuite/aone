@@ -1,7 +1,7 @@
 # aone
 
 `aone` is the AoneSuite command-line tool for managing sandboxes, templates,
-volumes, and account credentials against the AoneSuite control plane.
+volumes, and account credentials against the Aone API.
 
 ## Install
 
@@ -43,7 +43,7 @@ Credentials are resolved with the following precedence:
 
 ```
 flag --api-key   >  env AONE_API_KEY   >  ~/.config/aone/config.json
-flag --endpoint  >  env AONE_SANDBOX_API_URL  >  config file  >  built-in default
+flag --endpoint  >  env AONE_API_URL  >  config file  >  built-in default
 ```
 
 | Subcommand | Purpose |
@@ -127,7 +127,7 @@ API keys, `Authorization`, cookies, and JSON fields like `apiKey` / `password` /
 | Variable | Purpose |
 |---|---|
 | `AONE_API_KEY` | API key (overrides config file) |
-| `AONE_SANDBOX_API_URL` | Control-plane endpoint |
+| `AONE_API_URL` | Aone API endpoint |
 | `AONE_DEBUG` | `1`/`true` → debug logs; `2`/`trace` → trace logs |
 | `AONE_LOG_LEVEL` | Explicit level (`trace`/`debug`/`info`/`warn`/`error`) — overrides `-v`/`AONE_DEBUG` |
 | `AONE_LOG_FORMAT` | `json` switches log records to JSON; default is text |

@@ -252,11 +252,6 @@ func headerMap(h http.Header) map[string]string {
 	return out
 }
 
-const (
-	EnvAoneSandboxAPIURL = config.EnvEndpoint
-	EnvAoneAPIKey        = config.EnvAPIKey
-)
-
 // loadDotEnv loads variables from the .env file in the current directory.
 // Only variables not already set in the OS environment are loaded (OS takes priority).
 // Missing or unreadable .env files are silently ignored.

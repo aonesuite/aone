@@ -4,12 +4,11 @@ import (
 	"os"
 
 	"github.com/aonesuite/aone/internal/log"
-	"github.com/aonesuite/aone/packages/go/sandbox"
 )
 
 // DefaultEndpoint is the canonical control-plane URL used when no override
 // is supplied via flag, env, or config file.
-var DefaultEndpoint = sandbox.DefaultEndpoint
+const DefaultEndpoint = "https://api.aonesuite.com"
 
 // Resolved holds the final API key + endpoint after applying the precedence
 // chain, plus the source layers each value came from.

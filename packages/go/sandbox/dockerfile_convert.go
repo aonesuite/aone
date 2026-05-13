@@ -1,4 +1,3 @@
-// Dockerfile → TemplateBuilder conversion. Public SDK surface.
 package sandbox
 
 import (

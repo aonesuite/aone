@@ -7,27 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aonesuite/aone/packages/go/internal/sdkconfig"
 	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
 )
-
-// DefaultEndpoint is the public Sandbox API endpoint used when Config.Endpoint
-// is empty. Applications can override it for private deployments, staging
-// environments, or tests that point the SDK at a local HTTP server.
-const DefaultEndpoint = "https://sandbox.aonesuite.com"
 
 // AllTraffic is the CIDR that matches every IPv4 address; use it in
 // NetworkConfig.AllowOut / DenyOut to express "all outbound traffic".
 const AllTraffic = "0.0.0.0/0"
 
-// Environment variable names read by Config when its corresponding field is
-// empty. These mirror the CLI-layer names so a process that sets them once
-// keeps working for both the CLI and direct SDK consumers.
+// EnvDebug toggles SDK-level debug behavior when set to "1" / "true".
 const (
-	// EnvAPIKey overrides Config.APIKey when the field is empty.
-	EnvAPIKey = "AONE_API_KEY"
-	// EnvEndpoint overrides Config.Endpoint when the field is empty.
-	EnvEndpoint = "AONE_SANDBOX_API_URL"
-	// EnvDebug toggles SDK-level debug behavior when set to "1" / "true".
 	EnvDebug = "AONE_DEBUG"
 )
 
@@ -38,8 +27,9 @@ type Config struct {
 	// empty, NewClient falls back to the AONE_API_KEY environment variable.
 	APIKey string
 
-	// Endpoint overrides DefaultEndpoint. When empty, NewClient falls back to
-	// the AONE_SANDBOX_API_URL environment variable and finally DefaultEndpoint.
+	// Endpoint overrides the SDK default endpoint. When empty, NewClient falls
+	// back to the shared Aone endpoint environment variable and finally the
+	// default endpoint.
 	Endpoint string
 
 	// HTTPClient is used for all API, file, and envd requests. If nil, the SDK
@@ -73,21 +63,26 @@ type Client struct {
 // client can be initialized for the selected endpoint.
 //
 // Env-var fallbacks: when APIKey is empty, NewClient reads AONE_API_KEY; when
-// Endpoint is empty it reads AONE_SANDBOX_API_URL and finally DefaultEndpoint;
+// Endpoint is empty it reads the shared Aone endpoint environment variable and
+// finally the SDK default endpoint;
 // when Debug is false it reads AONE_DEBUG.
 func NewClient(config *Config) (*Client, error) {
+	cfg := Config{}
 	if config == nil {
-		config = &Config{}
+		config = &cfg
+	} else {
+		cfg = *config
+		config = &cfg
 	}
 	if config.APIKey == "" {
-		config.APIKey = os.Getenv(EnvAPIKey)
+		config.APIKey = os.Getenv(sdkconfig.EnvAPIKey)
 	}
 	endpoint := config.Endpoint
 	if endpoint == "" {
-		endpoint = os.Getenv(EnvEndpoint)
+		endpoint = os.Getenv(sdkconfig.EnvEndpoint)
 	}
 	if endpoint == "" {
-		endpoint = DefaultEndpoint
+		endpoint = sdkconfig.DefaultEndpoint
 	}
 	config.Endpoint = strings.TrimRight(endpoint, "/")
 	if config.HTTPClient == nil {

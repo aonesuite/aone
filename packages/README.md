@@ -4,7 +4,9 @@
 
 Current packages:
 
-- `go`: Go SDK module. Its current public package is `sandbox`, covering sandbox, template, volume, filesystem, command, PTY, and git operations.
+- `go`: Go SDK module. Its current public packages are:
+  - `sandbox`, covering sandbox, template, volume, filesystem, command, PTY, and git operations.
+  - `tts`, covering text-to-speech voice listing and synthesis.
 
 Go users import the sandbox package directly:
 
@@ -12,7 +14,13 @@ Go users import the sandbox package directly:
 import "github.com/aonesuite/aone/packages/go/sandbox"
 ```
 
-The Go SDK keeps the complete generated OpenAPI client under `go/internal/aoneapi` as a shared implementation detail. Public SDK packages should expose focused, module-level APIs such as `go/sandbox`, future `go/tts`, or future `go/projects` instead of making the generated client the public surface.
+Text-to-speech users import the TTS package directly:
+
+```go
+import "github.com/aonesuite/aone/packages/go/tts"
+```
+
+The Go SDK keeps the complete generated OpenAPI client under `go/internal/aoneapi` as a shared implementation detail. Public SDK packages should expose focused, module-level APIs such as `go/sandbox`, `go/tts`, or future `go/projects` instead of making the generated client the public surface.
 
 Planned language SDKs should keep their own manifest, tests, generation scripts, and README in their package directory. Shared OpenAPI and proto inputs live in `../spec/`; root-level Makefile targets should only orchestrate package-local build, test, and code generation commands.
 

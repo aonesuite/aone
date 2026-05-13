@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aonesuite/aone/packages/go/internal/sdkconfig"
 	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
 )
 
@@ -35,8 +36,8 @@ func TestParseBoolEnv(t *testing.T) {
 }
 
 func TestNewClientEnvFallback(t *testing.T) {
-	t.Setenv(EnvAPIKey, "env-key")
-	t.Setenv(EnvEndpoint, "https://env.example.com/")
+	t.Setenv(sdkconfig.EnvAPIKey, "env-key")
+	t.Setenv(sdkconfig.EnvEndpoint, "https://env.example.com/")
 	t.Setenv(EnvDebug, "true")
 
 	c, err := NewClient(nil)
@@ -57,23 +58,50 @@ func TestNewClientEnvFallback(t *testing.T) {
 	}
 }
 
+func TestNewClientDoesNotMutateInputConfig(t *testing.T) {
+	t.Setenv(sdkconfig.EnvAPIKey, "env-key")
+	t.Setenv(sdkconfig.EnvEndpoint, "https://env.example.com/")
+	t.Setenv(EnvDebug, "true")
+
+	cfg := &Config{}
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	if cfg.APIKey != "" || cfg.Endpoint != "" || cfg.HTTPClient != nil || cfg.Debug {
+		t.Fatalf("input config was mutated: %+v", cfg)
+	}
+	if got, want := c.config.APIKey, "env-key"; got != want {
+		t.Errorf("client APIKey = %q, want %q", got, want)
+	}
+	if got, want := c.config.Endpoint, "https://env.example.com"; got != want {
+		t.Errorf("client Endpoint = %q, want %q", got, want)
+	}
+	if !c.config.Debug {
+		t.Error("client Debug should be true from env")
+	}
+	if c.config.HTTPClient == nil {
+		t.Error("client HTTPClient should default")
+	}
+}
+
 func TestNewClientDefaultEndpoint(t *testing.T) {
-	t.Setenv(EnvAPIKey, "")
-	t.Setenv(EnvEndpoint, "")
+	t.Setenv(sdkconfig.EnvAPIKey, "")
+	t.Setenv(sdkconfig.EnvEndpoint, "")
 	t.Setenv(EnvDebug, "")
 
 	c, err := NewClient(&Config{})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	if c.config.Endpoint != DefaultEndpoint {
-		t.Errorf("Endpoint = %q, want %q", c.config.Endpoint, DefaultEndpoint)
+	if c.config.Endpoint != sdkconfig.DefaultEndpoint {
+		t.Errorf("Endpoint = %q, want %q", c.config.Endpoint, sdkconfig.DefaultEndpoint)
 	}
 }
 
 func TestNewClientExplicitConfigWins(t *testing.T) {
-	t.Setenv(EnvAPIKey, "env-key")
-	t.Setenv(EnvEndpoint, "https://env.example.com")
+	t.Setenv(sdkconfig.EnvAPIKey, "env-key")
+	t.Setenv(sdkconfig.EnvEndpoint, "https://env.example.com")
 
 	c, err := NewClient(&Config{APIKey: "explicit-key", Endpoint: "https://explicit.example.com"})
 	if err != nil {
