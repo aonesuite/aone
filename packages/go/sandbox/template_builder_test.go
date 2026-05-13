@@ -1,7 +1,6 @@
 package sandbox
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -101,36 +100,6 @@ func TestTemplateBuilderFromImageExclusive(t *testing.T) {
 	tb.FromImage("alpine")
 	if tb.fromTemplate != nil || tb.fromImage == nil || *tb.fromImage != "alpine" {
 		t.Fatal("FromImage should clear fromTemplate")
-	}
-	tb.FromRegistry("private/x:1", "u", "p")
-	if tb.fromImageRegistry == nil {
-		t.Fatal("FromRegistry should set fromImageRegistry")
-	}
-	var payload map[string]string
-	if err := json.Unmarshal(*tb.fromImageRegistry, &payload); err != nil {
-		t.Fatalf("registry payload not JSON: %v", err)
-	}
-	if payload["type"] != "registry" || payload["username"] != "u" || payload["password"] != "p" {
-		t.Errorf("registry payload = %v", payload)
-	}
-}
-
-func TestTemplateBuilderFromAWSAndGCPRegistry(t *testing.T) {
-	tb := NewTemplate().FromAWSRegistry("ecr/x:1", "AKID", "SECRET", "us-east-1")
-	if tb.fromImageRegistry == nil {
-		t.Fatal("AWS registry payload missing")
-	}
-	var aws map[string]string
-	_ = json.Unmarshal(*tb.fromImageRegistry, &aws)
-	if aws["type"] != "aws" || aws["awsRegion"] != "us-east-1" {
-		t.Errorf("aws payload = %v", aws)
-	}
-
-	tb.FromGCPRegistry("gcr/x:1", `{"foo":"bar"}`)
-	var gcp map[string]string
-	_ = json.Unmarshal(*tb.fromImageRegistry, &gcp)
-	if gcp["type"] != "gcp" {
-		t.Errorf("gcp payload = %v", gcp)
 	}
 }
 

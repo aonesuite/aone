@@ -87,8 +87,6 @@ func TestMatchPath(t *testing.T) {
 		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/sandboxes", true},
 		{"/api/v1/sbx/sandboxes/{id}", "/api/v1/sbx/sandboxes/abc", true},
 		{"/api/v1/sbx/sandboxes/{id}", "/api/v1/sbx/sandboxes/abc/extra", false},
-		{"/api/v1/sbx/sandboxes/{id}/pause", "/api/v1/sbx/sandboxes/abc/pause", true},
-		{"/api/v1/sbx/sandboxes/{id}/pause", "/api/v1/sbx/sandboxes/abc/resume", false},
 		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/sandboxes", true},
 		{"/api/v1/sbx/sandboxes", "/api/v1/sbx/templates", false},
 	}

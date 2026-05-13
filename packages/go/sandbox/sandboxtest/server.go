@@ -3,7 +3,7 @@
 // command paths invoking the SDK without contacting a real server.
 //
 // The Server starts an httptest.Server with default handlers covering the
-// sandbox, volume, and template control-plane endpoints. Tests may override
+// sandbox and template control-plane endpoints. Tests may override
 // any route via Handle, replace the default response payload via setter
 // helpers, or inspect captured requests for assertions.
 //
@@ -259,19 +259,7 @@ func (s *Server) installDefaults() {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
-	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/pause")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-
-	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/resume")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-	}
-
 	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/timeout")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-
-	s.routes[routeKey("POST", "/api/v1/sbx/sandboxes/{id}/refreshes")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
@@ -293,79 +281,6 @@ func (s *Server) installDefaults() {
 			"logs":        []map[string]any{{"line": "hello", "timestamp": now}},
 			"log_entries": []map[string]any{{"level": "info", "message": "hello", "fields": map[string]string{}, "timestamp": now}},
 		})
-	}
-
-	s.routes[routeKey("GET", "/api/v1/sbx/sandboxes/metrics")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"sandboxes": []any{}})
-	}
-
-	// --- volumes -----------------------------------------------------------
-	s.routes[routeKey("POST", "/api/v1/sbx/volumes")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusCreated, map[string]any{
-			"volumeID": "vol-test",
-			"name":     "test-volume",
-			"token":    "vol-tok",
-		})
-	}
-
-	s.routes[routeKey("GET", "/api/v1/sbx/volumes")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, []map[string]any{{
-			"volumeID": "vol-test",
-			"name":     "test-volume",
-			"token":    "vol-tok",
-		}})
-	}
-
-	s.routes[routeKey("GET", "/api/v1/sbx/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"volumeID": pathID(r.URL.Path, "/api/v1/sbx/volumes/", ""),
-			"name":     "test-volume",
-			"token":    "vol-tok",
-		})
-	}
-
-	s.routes[routeKey("DELETE", "/api/v1/sbx/volumes/{id}")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-
-	// volume content endpoints (envd-style; same server stands in for both)
-	volEntry := func(path string) map[string]any {
-		return map[string]any{
-			"name":  pathBase(path),
-			"path":  path,
-			"type":  "file",
-			"size":  int64(0),
-			"mode":  uint32(0o644),
-			"uid":   uint32(1000),
-			"gid":   uint32(1000),
-			"atime": now,
-			"mtime": now,
-			"ctime": now,
-		}
-	}
-
-	s.routes[routeKey("GET", "/volumecontent/{id}/dir")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, []map[string]any{volEntry(r.URL.Query().Get("path"))})
-	}
-	s.routes[routeKey("POST", "/volumecontent/{id}/dir")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusCreated, volEntry(r.URL.Query().Get("path")))
-	}
-	s.routes[routeKey("GET", "/volumecontent/{id}/path")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, volEntry(r.URL.Query().Get("path")))
-	}
-	s.routes[routeKey("PATCH", "/volumecontent/{id}/path")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, volEntry(r.URL.Query().Get("path")))
-	}
-	s.routes[routeKey("DELETE", "/volumecontent/{id}/path")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-	s.routes[routeKey("GET", "/volumecontent/{id}/file")] = func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("file-content"))
-	}
-	s.routes[routeKey("PUT", "/volumecontent/{id}/file")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusCreated, volEntry(r.URL.Query().Get("path")))
 	}
 
 	// --- templates ---------------------------------------------------------
@@ -419,24 +334,6 @@ func (s *Server) installDefaults() {
 	s.routes[routeKey("PATCH", "/api/v1/sbx/templates/{id}")] = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
-	s.routes[routeKey("GET", "/api/v1/sbx/templates/aliases/{alias}")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"template_id": "tpl-test",
-			"public":      false,
-		})
-	}
-	s.routes[routeKey("GET", "/api/v1/sbx/templates/{id}/tags")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, []any{})
-	}
-	s.routes[routeKey("POST", "/api/v1/sbx/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusCreated, map[string]any{"tags": []any{}})
-	}
-	s.routes[routeKey("DELETE", "/api/v1/sbx/templates/tags")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-	s.routes[routeKey("POST", "/api/v1/sbx/templates/{tid}/builds/{bid}")] = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-	}
 	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/status")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"template_id": "tpl-test",
@@ -448,11 +345,6 @@ func (s *Server) installDefaults() {
 	}
 	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/builds/{bid}/logs")] = func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"logs": []any{}})
-	}
-	s.routes[routeKey("GET", "/api/v1/sbx/templates/{tid}/files/{hash}")] = func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusCreated, map[string]any{
-			"present": true,
-		})
 	}
 }
 
@@ -522,16 +414,4 @@ func pathID(path, prefix, suffix string) string {
 		return rest
 	}
 	return before
-}
-
-// pathBase returns the last '/' separated segment.
-func pathBase(p string) string {
-	if p == "" {
-		return ""
-	}
-	idx := strings.LastIndex(p, "/")
-	if idx < 0 {
-		return p
-	}
-	return p[idx+1:]
 }

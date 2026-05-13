@@ -86,10 +86,6 @@ func renderPrettyInfo(d *sandbox.SandboxInfo) {
 	if d.AllowInternetAccess != nil {
 		printField("Internet access", fmt.Sprintf("%v", *d.AllowInternetAccess))
 	}
-	if d.Lifecycle != nil {
-		printField("Lifecycle", fmt.Sprintf("on_timeout=%s auto_resume=%v",
-			d.Lifecycle.OnTimeout, d.Lifecycle.AutoResume))
-	}
 	if d.Network != nil {
 		if b, err := json.MarshalIndent(d.Network, "  ", "  "); err == nil {
 			fmt.Printf("Network:\n  %s\n", string(b))

@@ -299,57 +299,6 @@ func (s *Sandbox) GetLogs(ctx context.Context, params *GetLogsParams) (*SandboxL
 	return sandboxLogsFromAPI(resp.JSON200), nil
 }
 
-// Pause pauses the sandbox when the backend supports pausing for the current state.
-func (s *Sandbox) Pause(ctx context.Context) error {
-	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/pause"
-	resp, body, err := s.client.api.DoJSON(ctx, http.MethodPost, path, nil, nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusNoContent {
-		return newAPIErrorFor(resp, body, resourceSandbox)
-	}
-	return nil
-}
-
-// ResumeParams configures a Resume call. Both fields are optional; nil values
-// instruct the server to use its defaults.
-type ResumeParams struct {
-	// Timeout is the new TTL (seconds) for the resumed sandbox. Nil keeps
-	// the server-side default.
-	Timeout *int32
-}
-
-// Resume resumes a paused sandbox. A 201 response indicates success.
-func (c *Client) Resume(ctx context.Context, sandboxID string, params ResumeParams) error {
-	body := map[string]any{}
-	if params.Timeout != nil {
-		body["timeout"] = params.Timeout
-	}
-	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(sandboxID) + "/resume"
-	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, path, body, nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusCreated {
-		return newAPIErrorFor(resp, respBody, resourceSandbox)
-	}
-	return nil
-}
-
-// Refresh extends the sandbox lifetime using the duration in params.
-func (s *Sandbox) Refresh(ctx context.Context, params RefreshParams) error {
-	path := "/api/v1/sbx/sandboxes/" + url.PathEscape(s.sandboxID) + "/refreshes"
-	resp, body, err := s.client.api.DoJSON(ctx, http.MethodPost, path, params.toAPI(), nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusNoContent {
-		return newAPIErrorFor(resp, body, resourceSandbox)
-	}
-	return nil
-}
-
 // WaitForReady polls GetInfo until the sandbox reaches StateRunning or ctx is
 // canceled. PollOption values control interval, backoff, and progress callbacks.
 func (s *Sandbox) WaitForReady(ctx context.Context, opts ...PollOption) (*SandboxInfo, error) {
@@ -382,27 +331,6 @@ func (c *Client) CreateAndWait(ctx context.Context, params CreateParams, opts ..
 		return nil, nil, err
 	}
 	return sb, info, nil
-}
-
-// GetSandboxesMetrics returns the latest metrics for multiple sandboxes.
-func (c *Client) GetSandboxesMetrics(ctx context.Context, params *GetSandboxesMetricsParams) (*SandboxesWithMetrics, error) {
-	path := "/api/v1/sbx/sandboxes/metrics"
-	if params != nil && len(params.SandboxIds) > 0 {
-		q := url.Values{}
-		for _, id := range params.SandboxIds {
-			q.Add("sandboxIds", id)
-		}
-		path += "?" + q.Encode()
-	}
-	var out SandboxesWithMetrics
-	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, newAPIErrorFor(resp, body, resourceSandbox)
-	}
-	return &out, nil
 }
 
 // Files returns the filesystem helper bound to this sandbox.

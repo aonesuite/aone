@@ -144,11 +144,7 @@ func TestInit_AcceptsPythonSyncAlias(t *testing.T) {
 	}
 }
 
-// TestBuild_FromDockerfile_CacheHit drives the COPY path where
-// GetTemplateFiles reports the archive as already present (default mock).
-// The build still proceeds to /api/v1/sbx/templates/.../builds/... but no upload
-// happens.
-func TestBuild_FromDockerfile_CacheHit(t *testing.T) {
+func TestBuild_FromDockerfile_CopyContentSentToCreateTemplate(t *testing.T) {
 	srv := withMock(t)
 
 	dir := t.TempDir()
@@ -156,110 +152,27 @@ func TestBuild_FromDockerfile_CacheHit(t *testing.T) {
 		[]byte("FROM alpine:3.20\nCOPY . /app\n"), 0o644); err != nil {
 		t.Fatalf("write dockerfile: %v", err)
 	}
-	// A real source file so ComputeFilesHash has content to hash.
 	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi"), 0o644); err != nil {
 		t.Fatalf("write hello: %v", err)
 	}
 
-	out := captureStdout(t, func() {
+	_ = captureStdout(t, func() {
 		Build(BuildInfo{
-			TemplateID: "tpl-new",
+			Name:       "demo",
 			Dockerfile: filepath.Join(dir, "Dockerfile"),
 			Path:       dir,
 		})
 	})
-	if !strings.Contains(out, "already uploaded (cached)") {
-		t.Fatalf("expected cache-hit message; out = %q", out)
+	reqs := srv.RequestsFor("POST", "/api/v1/sbx/templates")
+	if len(reqs) != 1 {
+		t.Fatalf("expected create-template request; got %+v", srv.Requests())
 	}
-	if !sawRequest(srv, "POST", "/api/v1/sbx/templates/tpl-new/builds/build-1") {
-		t.Fatalf("expected start build call; got %+v", srv.Requests())
-	}
-}
-
-// TestBuild_FromDockerfile_UploadsOnCacheMiss switches the files endpoint to
-// return present=false and a fake URL pointing back at the mock; the build
-// should then PUT to that URL via CollectAndUpload.
-func TestBuild_FromDockerfile_UploadsOnCacheMiss(t *testing.T) {
-	srv := withMock(t)
-
-	// Stand up an "upload" endpoint on the same mock server. CollectAndUpload
-	// PUTs the gzipped tar there; we just need a 200 response.
-	uploadHits := 0
-	srv.Handle("PUT", "/upload-target", func(w http.ResponseWriter, r *http.Request) {
-		uploadHits++
-		w.WriteHeader(http.StatusOK)
-	})
-	uploadURL := srv.URL() + "/upload-target"
-	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"present":false,"url":"` + uploadURL + `"}`))
-	})
-
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Dockerfile"),
-		[]byte("FROM alpine:3.20\nCOPY . /app\n"), 0o644); err != nil {
-		t.Fatalf("write dockerfile: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi"), 0o644); err != nil {
-		t.Fatalf("write hello: %v", err)
-	}
-
-	out := captureStdout(t, func() {
-		Build(BuildInfo{
-			TemplateID: "tpl-new",
-			Dockerfile: filepath.Join(dir, "Dockerfile"),
-			Path:       dir,
-		})
-	})
-	if !strings.Contains(out, "Uploading files for COPY") {
-		t.Fatalf("expected upload message; out = %q", out)
-	}
-	if uploadHits == 0 {
-		t.Fatalf("upload PUT never happened; requests = %+v", srv.Requests())
+	if !strings.Contains(reqs[0].Body, "COPY . /app") {
+		t.Fatalf("expected Dockerfile COPY content in request body: %q", reqs[0].Body)
 	}
 }
 
-// TestBuild_FromDockerfile_UploadFailureSurfaces verifies that a non-2xx
-// response from the upload URL bubbles back as an error from Build.
-func TestBuild_FromDockerfile_UploadFailureSurfaces(t *testing.T) {
-	srv := withMock(t)
-	srv.Handle("PUT", "/upload-target", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	})
-	uploadURL := srv.URL() + "/upload-target"
-	srv.Handle("GET", "/api/v1/sbx/templates/{tid}/files/{hash}", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"present":false,"url":"` + uploadURL + `"}`))
-	})
-
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Dockerfile"),
-		[]byte("FROM alpine:3.20\nCOPY . /app\n"), 0o644); err != nil {
-		t.Fatalf("write dockerfile: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi"), 0o644); err != nil {
-		t.Fatalf("write hello: %v", err)
-	}
-
-	stderr := captureStderr(t, func() {
-		_ = captureStdout(t, func() {
-			Build(BuildInfo{
-				TemplateID: "tpl-new",
-				Dockerfile: filepath.Join(dir, "Dockerfile"),
-				Path:       dir,
-			})
-		})
-	})
-	if !strings.Contains(stderr, "upload files") && !strings.Contains(stderr, "build from Dockerfile") {
-		t.Fatalf("stderr should mention upload failure; got %q", stderr)
-	}
-}
-
-// TestGet_RendersBuildsTable exercises the optional builds-rendering branch
-// in Get by overriding the template GET to include a builds slice.
-func TestGet_RendersBuildsTable(t *testing.T) {
+func TestGet_RendersTemplateDetail(t *testing.T) {
 	srv := withMock(t)
 	srv.Handle("GET", "/api/v1/sbx/templates/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -268,7 +181,8 @@ func TestGet_RendersBuildsTable(t *testing.T) {
 			"build_id":"33333333-3333-3333-3333-333333333333",
 			"build_status":"ready",
 			"cpu_count":2,"memory_mb":1024,"disk_size_mb":8192,
-			"envd_version":"0.0.1","public":false,
+			"envd_version":"0.0.1","public":false,"source":"user",
+			"editable":true,"deletable":true,
 			"aliases":[],"names":["x"],
 			"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"
 		}`))
@@ -276,7 +190,9 @@ func TestGet_RendersBuildsTable(t *testing.T) {
 	out := captureStdout(t, func() {
 		Get(GetInfo{TemplateID: "tpl-x"})
 	})
-	if !strings.Contains(out, "BUILD ID") || !strings.Contains(out, "33333333") {
-		t.Fatalf("stdout missing builds table: %q", out)
+	for _, want := range []string{"Build ID:", "33333333", "Names:", "Source:", "Editable:", "Deletable:"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("stdout missing %q: %q", want, out)
+		}
 	}
 }

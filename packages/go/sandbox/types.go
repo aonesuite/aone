@@ -30,34 +30,6 @@ type NetworkConfig struct {
 	MaskRequestHost *string
 }
 
-// LifecycleAction controls what happens when a sandbox reaches its timeout.
-type LifecycleAction string
-
-const (
-	// LifecycleActionKill terminates the sandbox when timeout is reached.
-	LifecycleActionKill LifecycleAction = "kill"
-	// LifecycleActionPause pauses the sandbox when timeout is reached.
-	LifecycleActionPause LifecycleAction = "pause"
-)
-
-// SandboxLifecycle configures timeout behavior. OnTimeout selects whether the
-// sandbox is killed or paused at expiry; AutoResume re-arms automatic resume.
-type SandboxLifecycle struct {
-	OnTimeout  LifecycleAction
-	AutoResume *bool
-}
-
-// SandboxInfoLifecycle is the lifecycle policy returned by sandbox info APIs.
-type SandboxInfoLifecycle struct {
-	OnTimeout  LifecycleAction
-	AutoResume bool
-}
-
-// AutoResumeConfig is the wire representation used by the create sandbox API.
-type AutoResumeConfig struct {
-	Enabled bool `json:"enabled"`
-}
-
 // SandboxState is the lifecycle state reported by the Sandbox API.
 type SandboxState string
 
@@ -91,21 +63,12 @@ type CreateParams struct {
 
 	// Network applies outbound network policy for the sandbox.
 	Network *NetworkConfig
-
-	// Lifecycle configures whether the sandbox is killed or paused on timeout.
-	Lifecycle *SandboxLifecycle
 }
 
 // ConnectParams controls how an existing sandbox connection is established.
 type ConnectParams struct {
 	// Timeout is the connection timeout in seconds.
 	Timeout int32
-}
-
-// RefreshParams extends the sandbox lifetime.
-type RefreshParams struct {
-	// Duration is the number of seconds to add to the sandbox lifetime.
-	Duration *int
 }
 
 // ListParams filters and paginates sandbox list requests.
@@ -161,12 +124,6 @@ func (p *GetLogsParams) toAPI() *apis.GetSandboxLogsParams {
 	}
 }
 
-// GetSandboxesMetricsParams selects multiple sandboxes for a metrics query.
-type GetSandboxesMetricsParams struct {
-	// SandboxIds is the list of sandbox IDs to include in the response.
-	SandboxIds []string
-}
-
 // SandboxInfo is the detailed state returned for one sandbox.
 type SandboxInfo struct {
 	// SandboxID is the stable identifier used by API and CLI operations.
@@ -201,8 +158,6 @@ type SandboxInfo struct {
 	AllowInternetAccess *bool
 	// Network is the sandbox network policy when provided.
 	Network *NetworkConfig
-	// Lifecycle is the timeout behavior when provided.
-	Lifecycle *SandboxInfoLifecycle
 }
 
 // ListedSandbox is the compact sandbox representation returned by list calls.
@@ -260,11 +215,6 @@ type SandboxLogEntry struct {
 	Message   string
 	Fields    map[string]string
 	Timestamp time.Time
-}
-
-// SandboxesWithMetrics maps sandbox IDs to their latest metrics sample.
-type SandboxesWithMetrics struct {
-	Sandboxes map[string]SandboxMetric
 }
 
 // ---------------------------------------------------------------------------
@@ -396,12 +346,6 @@ func (p *CreateParams) toAPI() (apis.CreateSandboxJSONRequestBody, error) {
 func (p *ConnectParams) toAPI() apis.ConnectSandboxJSONRequestBody {
 	return apis.ConnectSandboxJSONRequestBody{
 		Timeout: &p.Timeout,
-	}
-}
-
-func (p *RefreshParams) toAPI() apis.RefreshSandboxJSONRequestBody {
-	return apis.RefreshSandboxJSONRequestBody{
-		Duration: p.Duration,
 	}
 }
 

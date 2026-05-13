@@ -1,7 +1,7 @@
 # aone
 
 `aone` is the AoneSuite command-line tool and SDK monorepo. The root module
-builds the CLI for managing sandboxes, templates, volumes, and account
+builds the CLI for managing sandboxes, templates, and account
 credentials against the Aone API. `packages/go` contains the Go SDK packages
 for sandbox automation and text-to-speech.
 
@@ -90,12 +90,10 @@ Top-level groups (run `aone <cmd> --help` for full flag listings):
 
 ```
 aone auth        login | logout | info | configure
-aone sandbox     list | create | connect | info | kill | pause | resume |
-                 exec | logs | metrics
+aone sandbox     list | create | connect | info | kill | exec | logs |
+                 metrics
 aone sandbox template   init | create | list | get | delete | publish |
                         unpublish | builds | migrate
-aone sandbox volume     list | create | info | delete | ls | cat | cp |
-                        rm | mkdir
 ```
 
 Common flags:
@@ -109,7 +107,6 @@ Common aliases:
 
 - `aone sandbox` can be shortened to `aone sbx`.
 - `aone sandbox template` can be shortened to `aone sandbox tpl`.
-- `aone sandbox volume` can be shortened to `aone sandbox vol`.
 - Frequently used subcommands also have short aliases, for example `list` /
   `ls`, `create` / `cr`, `connect` / `cn`, `exec` / `ex`, and `logs` / `lg`.
 
@@ -132,7 +129,7 @@ Current public packages:
 
 | Package | Purpose |
 |---|---|
-| `github.com/aonesuite/aone/packages/go/sandbox` | Create and operate sandboxes, commands, files, PTY sessions, Git repositories, snapshots, templates, and volumes. |
+| `github.com/aonesuite/aone/packages/go/sandbox` | Create and operate sandboxes, commands, files, PTY sessions, Git repositories, templates, logs, and metrics. |
 | `github.com/aonesuite/aone/packages/go/tts` | List TTS voices and synthesize text into audio. |
 
 Sandbox example:

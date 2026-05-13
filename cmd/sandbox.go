@@ -84,39 +84,6 @@ func newSandboxKillCmd() *cobra.Command {
 	return cmd
 }
 
-func newSandboxPauseCmd() *cobra.Command {
-	info := instance.PauseInfo{}
-	cmd := &cobra.Command{
-		Use:     "pause [sandboxIDs...]",
-		Aliases: []string{"ps"},
-		Short:   "Pause one or more sandboxes (alias: ps)",
-		Run: func(cmd *cobra.Command, args []string) {
-			info.SandboxIDs = args
-			instance.Pause(info)
-		},
-	}
-	cmd.Flags().BoolVarP(&info.All, "all", "a", false, "pause all sandboxes")
-	cmd.Flags().StringVarP(&info.State, "state", "s", "", "filter by state when using --all")
-	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "filter by metadata when using --all")
-	return cmd
-}
-
-func newSandboxResumeCmd() *cobra.Command {
-	info := instance.ResumeInfo{}
-	cmd := &cobra.Command{
-		Use:     "resume [sandboxIDs...]",
-		Aliases: []string{"rs"},
-		Short:   "Resume one or more paused sandboxes (alias: rs)",
-		Run: func(cmd *cobra.Command, args []string) {
-			info.SandboxIDs = args
-			instance.Resume(info)
-		},
-	}
-	cmd.Flags().BoolVarP(&info.All, "all", "a", false, "resume all paused sandboxes")
-	cmd.Flags().StringVarP(&info.Metadata, "metadata", "m", "", "filter by metadata when using --all")
-	return cmd
-}
-
 func newSandboxExecCmd() *cobra.Command {
 	info := instance.ExecInfo{}
 	cmd := &cobra.Command{
@@ -201,13 +168,10 @@ func init() {
 		newSandboxConnectCmd(),
 		newSandboxInfoCmd(),
 		newSandboxKillCmd(),
-		newSandboxPauseCmd(),
-		newSandboxResumeCmd(),
 		newSandboxExecCmd(),
 		newSandboxLogsCmd(),
 		newSandboxMetricsCmd(),
 		newTemplateCmd(),
-		newVolumeCmd(),
 	)
 	rootCmd.AddCommand(sandboxCmd)
 }

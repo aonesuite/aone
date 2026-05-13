@@ -2,10 +2,10 @@
 // sandboxes.
 //
 // A Client talks to the sandbox control plane. It can create sandboxes, connect
-// to existing sandboxes, list running sandboxes, manage templates, snapshots,
-// and volumes, and inspect logs or metrics. A Sandbox value represents one
+// to existing sandboxes, list running sandboxes, manage templates, and inspect
+// logs or metrics. A Sandbox value represents one
 // running sandbox and exposes helpers for commands, files, Git, PTY sessions,
-// snapshots, and lifecycle operations.
+// and lifecycle operations.
 //
 // The SDK reads AONE_API_KEY when Config.APIKey is empty. A custom endpoint can
 // be supplied through Config.Endpoint or AONE_API_URL.

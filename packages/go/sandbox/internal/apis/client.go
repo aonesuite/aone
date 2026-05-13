@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/aonesuite/aone/packages/go/internal/aoneapi"
 )
@@ -118,6 +117,9 @@ type SandboxNetworkConfig = aoneapi.HandlerSandboxNetworkRouteConfig
 // ServiceSandboxLogEntry aliases one generated sandbox log entry.
 type ServiceSandboxLogEntry = aoneapi.ServiceSandboxLogEntry
 
+// ServiceBuildLogEntry aliases one generated template build log entry.
+type ServiceBuildLogEntry = aoneapi.ServiceBuildLogEntry
+
 // EnvVars represents environment variables in API payloads.
 type EnvVars = map[string]string
 
@@ -130,39 +132,11 @@ type Mcp = map[string]interface{}
 // SandboxState is a sandbox lifecycle state value.
 type SandboxState = string
 
-// SandboxVolumeMount describes a volume mount returned by the API.
-type SandboxVolumeMount struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
-
-// GetSandboxesMetricsParams contains query parameters for batch metrics.
-type GetSandboxesMetricsParams struct {
-	SandboxIds []string `form:"sandboxIds,omitempty" json:"sandboxIds,omitempty"`
-}
-
-// SandboxesWithMetrics maps sandbox IDs to metrics.
-type SandboxesWithMetrics struct {
-	Sandboxes map[string]SandboxMetric `json:"sandboxes"`
-}
-
-// GetSnapshotsParams contains query parameters for listing snapshots.
-type GetSnapshotsParams struct{}
-
-// SnapshotInfo identifies a sandbox snapshot.
-type SnapshotInfo struct {
-	Names      []string `json:"names"`
-	SnapshotID string   `json:"snapshotID"`
-}
-
 // Template aliases the generated template response.
 type Template = aoneapi.HandlerTemplateResponse
 
 // TemplateBuild aliases the generated template build response.
 type TemplateBuild = aoneapi.HandlerTemplateBuildStatusResponse
-
-// TemplateWithBuilds aliases the generated template-with-builds response.
-type TemplateWithBuilds = aoneapi.HandlerTemplateResponse
 
 // TemplateBuildInfo aliases the generated template build status response.
 type TemplateBuildInfo = aoneapi.HandlerTemplateBuildStatusResponse
@@ -173,59 +147,6 @@ type TemplateBuildLogsResponse = aoneapi.HandlerTemplateBuildLogsResponse
 // TemplateRequestResponseV3 aliases the generated template request response.
 type TemplateRequestResponseV3 = aoneapi.HandlerTemplateResponse
 
-// TemplateBuildFileUpload describes an upload URL for template build files.
-type TemplateBuildFileUpload struct {
-	Present bool   `json:"present"`
-	URL     string `json:"url"`
-}
-
-// TemplateAliasResponse identifies a template alias lookup result.
-type TemplateAliasResponse struct {
-	TemplateID string `json:"templateID"`
-	Public     bool   `json:"public"`
-}
-
-// AssignedTemplateTags describes tags assigned to a template build.
-type AssignedTemplateTags struct {
-	BuildID string   `json:"buildID"`
-	Tags    []string `json:"tags"`
-}
-
-// TemplateTagInfo describes one template tag assignment.
-type TemplateTagInfo struct {
-	BuildID   string    `json:"buildID"`
-	Tag       string    `json:"tag"`
-	CreatedAt time.Time `json:"createdAt"`
-}
-
-// VolumeAndToken contains a volume plus its access token.
-type VolumeAndToken struct {
-	VolumeID string `json:"volumeID"`
-	Name     string `json:"name"`
-	Token    string `json:"token"`
-}
-
-// GeneralRegistry contains username/password registry credentials.
-type GeneralRegistry struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Type     string `json:"type"`
-}
-
-// AWSRegistry contains AWS ECR registry credentials.
-type AWSRegistry struct {
-	AwsAccessKeyID     string `json:"awsAccessKeyId"`
-	AwsSecretAccessKey string `json:"awsSecretAccessKey"`
-	AwsRegion          string `json:"awsRegion"`
-	Type               string `json:"type"`
-}
-
-// GCPRegistry contains Google registry service-account credentials.
-type GCPRegistry struct {
-	ServiceAccountJSON string `json:"serviceAccountJson"`
-	Type               string `json:"type"`
-}
-
 // UpdateTemplateJSONRequestBody aliases the generated template update request.
 type UpdateTemplateJSONRequestBody = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleUpdateTemplateJSONRequestBody
 
@@ -235,69 +156,11 @@ type CreateTemplateV3JSONRequestBody = aoneapi.GithubComAonesuiteInfraInternalPr
 // GetTemplateBuildLogsParams aliases the generated template build log parameters.
 type GetTemplateBuildLogsParams = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleGetTemplateBuildLogsParams
 
-// RefreshSandboxJSONRequestBody contains the requested sandbox timeout duration.
-type RefreshSandboxJSONRequestBody struct {
-	Duration *int `json:"duration,omitempty"`
-}
-
 // GetTemplatesParams aliases the generated template list query parameters.
 type GetTemplatesParams = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListTemplatesParams
 
-// GetTemplateParams contains template lookup pagination parameters.
-type GetTemplateParams struct {
-	NextToken *string `form:"nextToken,omitempty" json:"nextToken,omitempty"`
-	Limit     *int32  `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// GetTemplateBuildStatusParams contains template build status query parameters.
-type GetTemplateBuildStatusParams struct {
-	LogsOffset *int32    `form:"logsOffset,omitempty" json:"logsOffset,omitempty"`
-	Limit      *int32    `form:"limit,omitempty" json:"limit,omitempty"`
-	Level      *LogLevel `form:"level,omitempty" json:"level,omitempty"`
-}
-
 // LogLevel is a template build log severity filter.
 type LogLevel string
-
-// FromImageRegistry stores raw registry credential JSON.
-type FromImageRegistry json.RawMessage
-
-// UnmarshalJSON preserves registry credential JSON without interpreting it.
-func (f *FromImageRegistry) UnmarshalJSON(data []byte) error {
-	*f = append((*f)[:0], data...)
-	return nil
-}
-
-// TemplateStep describes one template build step.
-type TemplateStep struct {
-	Args      *[]string `json:"args,omitempty"`
-	FilesHash *string   `json:"filesHash,omitempty"`
-	Force     *bool     `json:"force,omitempty"`
-	Type      string    `json:"type"`
-}
-
-// StartTemplateBuildV2JSONRequestBody contains the template build start payload.
-type StartTemplateBuildV2JSONRequestBody struct {
-	Force             *bool              `json:"force,omitempty"`
-	FromImage         *string            `json:"fromImage,omitempty"`
-	FromImageRegistry *FromImageRegistry `json:"fromImageRegistry,omitempty"`
-	FromTemplate      *string            `json:"fromTemplate,omitempty"`
-	ReadyCmd          *string            `json:"readyCmd,omitempty"`
-	StartCmd          *string            `json:"startCmd,omitempty"`
-	Steps             *[]TemplateStep    `json:"steps,omitempty"`
-}
-
-// AssignTemplateTagsJSONRequestBody contains a template tag assignment request.
-type AssignTemplateTagsJSONRequestBody struct {
-	Tags   []string `json:"tags"`
-	Target string   `json:"target"`
-}
-
-// DeleteTemplateTagsJSONRequestBody contains a template tag deletion request.
-type DeleteTemplateTagsJSONRequestBody struct {
-	Name string   `json:"name"`
-	Tags []string `json:"tags"`
-}
 
 // GetV2SandboxesResponse aliases the generated sandbox list response.
 type GetV2SandboxesResponse = aoneapi.GithubComAonesuiteInfraInternalProductsSandboxHandlerModuleListSandboxesResponse

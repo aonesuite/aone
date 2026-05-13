@@ -27,7 +27,7 @@ var (
 	ErrSandboxNotFound = fmt.Errorf("sandbox %w", ErrNotFound)
 
 	// ErrFileNotFound is returned when a file or directory inside a sandbox
-	// or volume is missing. Wraps ErrNotFound.
+	// is missing. Wraps ErrNotFound.
 	ErrFileNotFound = fmt.Errorf("file %w", ErrNotFound)
 
 	// ErrAuthentication is returned when the API key / access token is
@@ -68,9 +68,6 @@ var (
 	// ErrFileUpload is returned when uploading build context files fails.
 	// Wraps ErrBuild.
 	ErrFileUpload = fmt.Errorf("file upload: %w", ErrBuild)
-
-	// ErrVolume is returned for volume-specific failures.
-	ErrVolume = errors.New("volume error")
 )
 
 // APIError represents a non-successful HTTP response from the Sandbox API or
@@ -134,7 +131,6 @@ const (
 	resourceUnknown resourceHint = iota
 	resourceSandbox
 	resourceFile
-	resourceVolume
 	resourceTemplate
 	resourceBuild
 	resourceFileUpload
@@ -218,9 +214,6 @@ func classifySentinel(status int, code, message string, hint resourceHint) error
 		return ErrNotEnoughSpace
 	}
 
-	if hint == resourceVolume {
-		return ErrVolume
-	}
 	if hint == resourceTemplate {
 		return ErrTemplate
 	}

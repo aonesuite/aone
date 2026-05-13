@@ -30,7 +30,7 @@ func Builds(info BuildsInfo) {
 		return
 	}
 
-	buildInfo, err := client.GetTemplateBuildStatus(context.Background(), info.TemplateID, info.BuildID, nil)
+	buildInfo, err := client.GetTemplateBuildStatus(context.Background(), info.TemplateID, info.BuildID)
 	if err != nil {
 		sbClient.PrintError("get build status failed: %v", err)
 		return
@@ -39,11 +39,22 @@ func Builds(info BuildsInfo) {
 	fmt.Printf("Template ID:  %s\n", buildInfo.TemplateID)
 	fmt.Printf("Build ID:     %s\n", buildInfo.BuildID)
 	fmt.Printf("Status:       %s\n", buildInfo.Status)
+	fmt.Printf("Envd Version: %s\n", buildInfo.EnvdVersion)
 
 	if len(buildInfo.Logs) > 0 {
 		fmt.Printf("\nBuild Logs:\n")
 		for _, log := range buildInfo.Logs {
 			fmt.Printf("  %s\n", log)
+		}
+	}
+	if len(buildInfo.LogEntries) > 0 {
+		fmt.Printf("\nStructured Logs:\n")
+		for _, entry := range buildInfo.LogEntries {
+			fmt.Printf("  [%s] %s %s\n",
+				sbClient.FormatTimestamp(entry.Timestamp),
+				sbClient.LogLevelBadge(string(entry.Level)),
+				entry.Message,
+			)
 		}
 	}
 }

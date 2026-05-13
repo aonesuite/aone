@@ -3,8 +3,6 @@ package sandbox
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -34,8 +32,8 @@ func (c *Client) CreateTemplate(ctx context.Context, body CreateTemplateParams) 
 	return templateCreateResponseFromAPI(resp.JSON202), nil
 }
 
-// GetTemplate returns template metadata and build history for templateID.
-func (c *Client) GetTemplate(ctx context.Context, templateID string, params *GetTemplateParams) (*TemplateWithBuilds, error) {
+// GetTemplate returns template metadata for templateID.
+func (c *Client) GetTemplate(ctx context.Context, templateID string) (*Template, error) {
 	resp, err := c.api.GetTemplatesTemplateIDWithResponse(ctx, templateID)
 	if err != nil {
 		return nil, err
@@ -43,7 +41,7 @@ func (c *Client) GetTemplate(ctx context.Context, templateID string, params *Get
 	if resp.JSON200 == nil {
 		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceTemplate)
 	}
-	return templateWithBuildsFromAPI(resp.JSON200), nil
+	return templateDetailFromAPI(resp.JSON200), nil
 }
 
 // DeleteTemplate deletes a template by ID. The API may accept either 200 or 204
@@ -72,9 +70,8 @@ func (c *Client) UpdateTemplate(ctx context.Context, templateID string, body Upd
 	return nil
 }
 
-// GetTemplateBuildStatus returns the current status for one template build,
-// optionally including a bounded log snippet.
-func (c *Client) GetTemplateBuildStatus(ctx context.Context, templateID, buildID string, params *GetBuildStatusParams) (*TemplateBuildInfo, error) {
+// GetTemplateBuildStatus returns the current status for one template build.
+func (c *Client) GetTemplateBuildStatus(ctx context.Context, templateID, buildID string) (*TemplateBuildInfo, error) {
 	resp, err := c.api.GetTemplatesTemplateIDBuildsBuildIDStatusWithResponse(ctx, templateID, buildID)
 	if err != nil {
 		return nil, err
@@ -95,131 +92,6 @@ func (c *Client) GetTemplateBuildLogs(ctx context.Context, templateID, buildID s
 		return nil, newAPIErrorFor(resp.HTTPResponse, resp.Body, resourceBuild)
 	}
 	return templateBuildLogsFromAPI(resp.JSON200), nil
-}
-
-// StartTemplateBuild starts or restarts a build for an existing template/build
-// pair using the supplied source image, source template, commands, and steps.
-func (c *Client) StartTemplateBuild(ctx context.Context, templateID, buildID string, body StartTemplateBuildParams) error {
-	apiBody, err := body.toAPI()
-	if err != nil {
-		return err
-	}
-	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/builds/" + url.PathEscape(buildID)
-	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, path, apiBody, nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusAccepted {
-		return newAPIErrorFor(resp, respBody, resourceBuild)
-	}
-	return nil
-}
-
-// GetTemplateFiles returns upload metadata for a template file bundle hash.
-func (c *Client) GetTemplateFiles(ctx context.Context, templateID, hash string) (*TemplateBuildFileUpload, error) {
-	var out TemplateBuildFileUpload
-	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/files/" + url.PathEscape(hash)
-	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusCreated {
-		return nil, newAPIErrorFor(resp, body, resourceFileUpload)
-	}
-	return &out, nil
-}
-
-// GetTemplateByAlias resolves a template alias to template metadata.
-func (c *Client) GetTemplateByAlias(ctx context.Context, alias string) (*TemplateAliasResponse, error) {
-	var out TemplateAliasResponse
-	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
-	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, newAPIErrorFor(resp, body, resourceTemplate)
-	}
-	return &out, nil
-}
-
-// TemplateAliasExists reports whether a template alias exists.
-// It returns true when the caller is the owner (200) or the alias is owned by
-// someone else (403); false when the alias is not found (404). Any other
-// status is returned as an error.
-func (c *Client) TemplateAliasExists(ctx context.Context, alias string) (bool, error) {
-	var out TemplateAliasResponse
-	path := "/api/v1/sbx/templates/aliases/" + url.PathEscape(alias)
-	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
-	if err != nil {
-		return false, err
-	}
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return true, nil
-	case http.StatusForbidden:
-		return true, nil
-	case http.StatusNotFound:
-		return false, nil
-	default:
-		return false, newAPIErrorFor(resp, body, resourceTemplate)
-	}
-}
-
-// AssignTemplateTags assigns tags to the target described by body.
-func (c *Client) AssignTemplateTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
-	var out AssignedTemplateTags
-	resp, respBody, err := c.api.DoJSON(ctx, http.MethodPost, "/api/v1/sbx/templates/tags", body.toAPI(), &out)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusCreated {
-		return nil, newAPIErrorFor(resp, respBody, resourceTemplate)
-	}
-	return &out, nil
-}
-
-// DeleteTemplateTags removes tags from a template target.
-func (c *Client) DeleteTemplateTags(ctx context.Context, body DeleteTagsParams) error {
-	resp, respBody, err := c.api.DoJSON(ctx, http.MethodDelete, "/api/v1/sbx/templates/tags", body.toAPI(), nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusNoContent {
-		return newAPIErrorFor(resp, respBody, resourceTemplate)
-	}
-	return nil
-}
-
-// GetTemplateTags returns all tags currently attached to templateID.
-func (c *Client) GetTemplateTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
-	var out []TemplateTagInfo
-	path := "/api/v1/sbx/templates/" + url.PathEscape(templateID) + "/tags"
-	resp, body, err := c.api.DoJSON(ctx, http.MethodGet, path, nil, &out)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, newAPIErrorFor(resp, body, resourceTemplate)
-	}
-	return out, nil
-}
-
-// AssignTags is a shorter alias for AssignTemplateTags. Prefer
-// AssignTemplateTags when writing new code.
-func (c *Client) AssignTags(ctx context.Context, body ManageTagsParams) (*AssignedTemplateTags, error) {
-	return c.AssignTemplateTags(ctx, body)
-}
-
-// RemoveTags is a shorter alias for DeleteTemplateTags. Prefer
-// DeleteTemplateTags when writing new code.
-func (c *Client) RemoveTags(ctx context.Context, body DeleteTagsParams) error {
-	return c.DeleteTemplateTags(ctx, body)
-}
-
-// GetTags is a shorter alias for GetTemplateTags.
-func (c *Client) GetTags(ctx context.Context, templateID string) ([]TemplateTagInfo, error) {
-	return c.GetTemplateTags(ctx, templateID)
 }
 
 // WaitForBuild polls build status until the build becomes ready, fails, or the
@@ -247,7 +119,7 @@ func (c *Client) WaitForBuild(ctx context.Context, templateID, buildID string, o
 				}
 			}
 		}
-		info, err := c.GetTemplateBuildStatus(ctx, templateID, buildID, nil)
+		info, err := c.GetTemplateBuildStatus(ctx, templateID, buildID)
 		if err != nil {
 			return false, nil, fmt.Errorf("get build status %s/%s: %w", templateID, buildID, err)
 		}

@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"time"
 
 	"github.com/aonesuite/aone/internal/config"
 	"github.com/aonesuite/aone/packages/go/sandbox"
-	"github.com/aonesuite/aone/packages/go/sandbox/dockerfile"
 
 	sbClient "github.com/aonesuite/aone/internal/sandbox"
 )
@@ -44,7 +42,8 @@ type BuildInfo struct {
 	// Wait indicates whether to wait for build completion.
 	Wait bool
 
-	// NoCache forces a full build and ignores cache.
+	// NoCache is retained for CLI compatibility but ignored by the current
+	// OpenAPI-backed create-template flow.
 	NoCache bool
 
 	// Dockerfile is the Dockerfile path and enables v2 Dockerfile builds.
@@ -63,9 +62,7 @@ type BuildInfo struct {
 	SaveConfig bool
 }
 
-// Build creates or rebuilds a template.
-// When TemplateID is provided, it starts a new build for an existing template.
-// Otherwise, it creates a new template using Name and starts its first build.
+// Build creates a template using the OpenAPI-backed create-template endpoint.
 func Build(info BuildInfo) {
 	// Pull defaults from aone.sandbox.toml when fields are missing. Flag
 	// values always win; the file fills in the blanks so users can re-run
@@ -99,119 +96,62 @@ func Build(info BuildInfo) {
 	}
 
 	ctx := context.Background()
-	templateID := info.TemplateID
-	buildID := ""
-
-	if templateID == "" {
-		// Create a new template.
-		if info.Name == "" {
-			sbClient.PrintError("template name (--name) or template ID (--template-id) is required")
-			return
-		}
-		if info.Dockerfile == "" && info.FromImage == "" && info.FromTemplate == "" {
-			sbClient.PrintError("--from-image, --from-template, or --dockerfile is required")
-			return
-		}
-
-		createParams := sandbox.CreateTemplateParams{
-			Name:     &info.Name,
-			StartCmd: stringPtrFromNonEmpty(info.StartCmd),
-			ReadyCmd: stringPtrFromNonEmpty(info.ReadyCmd),
-		}
-		if info.CPUCount > 0 {
-			createParams.CPUCount = &info.CPUCount
-		}
-		if info.MemoryMB > 0 {
-			createParams.MemoryMB = &info.MemoryMB
-		}
-		if info.Dockerfile != "" {
-			content, rErr := os.ReadFile(info.Dockerfile)
-			if rErr != nil {
-				sbClient.PrintError("read Dockerfile failed: %v", rErr)
-				return
-			}
-			dockerfile := string(content)
-			createParams.Dockerfile = &dockerfile
-		} else if info.FromImage != "" {
-			dockerfile := "FROM " + info.FromImage + "\n"
-			createParams.Dockerfile = &dockerfile
-		} else if info.FromTemplate != "" {
-			dockerfile := "FROM " + info.FromTemplate + "\n"
-			createParams.Dockerfile = &dockerfile
-		}
-
-		fmt.Printf("Creating template %s...\n", info.Name)
-		resp, cErr := client.CreateTemplate(ctx, createParams)
-		if cErr != nil {
-			sbClient.PrintError("create template failed: %v", cErr)
-			return
-		}
-		templateID = resp.TemplateID
-		buildID = resp.BuildID
-		sbClient.PrintSuccess("Template %s created (build ID: %s)", templateID, buildID)
-
-		// Persist newly assigned identifiers so subsequent commands can
-		// pick them up without explicit flags. Best-effort: log on failure
-		// but don't fail the build.
-		if info.SaveConfig {
-			if pErr := saveProjectFromBuild(info, projectLoc, templateID); pErr != nil {
-				sbClient.PrintWarn("could not save %s: %v", config.ProjectFileName, pErr)
-			}
-		}
-	} else {
-		// Fetch the existing template to find the latest build ID.
-		tmpl, gErr := client.GetTemplate(ctx, templateID, nil)
-		if gErr != nil {
-			sbClient.PrintError("get template failed: %v", gErr)
-			return
-		}
-		if len(tmpl.Builds) > 0 {
-			// Use the last build; the API returns builds in ascending time order.
-			buildID = tmpl.Builds[len(tmpl.Builds)-1].BuildID
-		} else {
-			sbClient.PrintError("no builds found for template, cannot rebuild")
-			return
-		}
+	if info.TemplateID != "" {
+		sbClient.PrintError("rebuilding an existing template is not available in the OpenAPI contract")
+		return
+	}
+	if info.Name == "" {
+		sbClient.PrintError("template name (--name) is required")
+		return
+	}
+	if info.Dockerfile == "" && info.FromImage == "" && info.FromTemplate == "" {
+		sbClient.PrintError("--from-image, --from-template, or --dockerfile is required")
+		return
 	}
 
-	if info.Dockerfile != "" && info.TemplateID != "" {
-		if err := buildFromDockerfile(ctx, client, templateID, buildID, info); err != nil {
-			sbClient.PrintError("%v", err)
+	createParams := sandbox.CreateTemplateParams{
+		Name:     &info.Name,
+		StartCmd: stringPtrFromNonEmpty(info.StartCmd),
+		ReadyCmd: stringPtrFromNonEmpty(info.ReadyCmd),
+	}
+	if info.CPUCount > 0 {
+		createParams.CPUCount = &info.CPUCount
+	}
+	if info.MemoryMB > 0 {
+		createParams.MemoryMB = &info.MemoryMB
+	}
+	if info.Dockerfile != "" {
+		content, rErr := os.ReadFile(info.Dockerfile)
+		if rErr != nil {
+			sbClient.PrintError("read Dockerfile failed: %v", rErr)
 			return
 		}
-	} else if info.TemplateID != "" {
-		// Rebuild flow: a Dockerfile/from-image/from-template was provided and
-		// we need to start a new build for the existing template. The
-		// fresh-template path above already kicked off the first build via
-		// CreateTemplate, so it falls through to the wait/exit branch below.
-		// Validate the build source.
-		if info.FromImage == "" && info.FromTemplate == "" {
-			sbClient.PrintError("--from-image, --from-template, or --dockerfile is required")
-			return
-		}
+		dockerfile := string(content)
+		createParams.Dockerfile = &dockerfile
+	} else if info.FromImage != "" {
+		dockerfile := "FROM " + info.FromImage + "\n"
+		createParams.Dockerfile = &dockerfile
+	} else if info.FromTemplate != "" {
+		dockerfile := "FROM " + info.FromTemplate + "\n"
+		createParams.Dockerfile = &dockerfile
+	}
 
-		buildParams := sandbox.StartTemplateBuildParams{}
-		if info.FromImage != "" {
-			buildParams.FromImage = &info.FromImage
-		}
-		if info.FromTemplate != "" {
-			buildParams.FromTemplate = &info.FromTemplate
-		}
-		if info.StartCmd != "" {
-			buildParams.StartCmd = &info.StartCmd
-		}
-		if info.ReadyCmd != "" {
-			buildParams.ReadyCmd = &info.ReadyCmd
-		}
-		if info.NoCache {
-			force := true
-			buildParams.Force = &force
-		}
+	fmt.Printf("Creating template %s...\n", info.Name)
+	resp, cErr := client.CreateTemplate(ctx, createParams)
+	if cErr != nil {
+		sbClient.PrintError("create template failed: %v", cErr)
+		return
+	}
+	templateID := resp.TemplateID
+	buildID := resp.BuildID
+	sbClient.PrintSuccess("Template %s created (build ID: %s)", templateID, buildID)
 
-		fmt.Printf("Starting build for template %s (build ID: %s)...\n", templateID, buildID)
-		if err := client.StartTemplateBuild(ctx, templateID, buildID, buildParams); err != nil {
-			sbClient.PrintError("start build failed: %v", err)
-			return
+	// Persist newly assigned identifiers so subsequent commands can
+	// pick them up without explicit flags. Best-effort: log on failure
+	// but don't fail the build.
+	if info.SaveConfig {
+		if pErr := saveProjectFromBuild(info, projectLoc, templateID); pErr != nil {
+			sbClient.PrintWarn("could not save %s: %v", config.ProjectFileName, pErr)
 		}
 	}
 
@@ -244,7 +184,7 @@ func Build(info BuildInfo) {
 		}
 
 		// Check build status.
-		buildInfo, bErr := client.GetTemplateBuildStatus(ctx, templateID, buildID, nil)
+		buildInfo, bErr := client.GetTemplateBuildStatus(ctx, templateID, buildID)
 		if bErr != nil {
 			sbClient.PrintError("get build status failed: %v", bErr)
 			return
@@ -280,103 +220,6 @@ func stringPtrFromNonEmpty(v string) *string {
 		return nil
 	}
 	return &v
-}
-
-// buildFromDockerfile handles the v2 Dockerfile build flow:
-// parse Dockerfile, upload COPY files, then start the build with steps.
-func buildFromDockerfile(ctx context.Context, client *sandbox.Client, templateID, buildID string, info BuildInfo) error {
-	// Read the Dockerfile.
-	content, err := os.ReadFile(info.Dockerfile)
-	if err != nil {
-		return fmt.Errorf("read Dockerfile: %w", err)
-	}
-
-	// Determine the build context directory.
-	contextPath := info.Path
-	if contextPath == "" {
-		contextPath = filepath.Dir(info.Dockerfile)
-	}
-	contextPath, err = filepath.Abs(contextPath)
-	if err != nil {
-		return fmt.Errorf("resolve context path: %w", err)
-	}
-
-	// Parse the Dockerfile.
-	result, err := sandbox.ConvertDockerfile(string(content))
-	if err != nil {
-		return fmt.Errorf("parse Dockerfile: %w", err)
-	}
-	fmt.Printf("Parsed Dockerfile: base image=%s, %d steps\n", result.BaseImage, len(result.Steps))
-
-	// Read .dockerignore.
-	ignorePatterns := dockerfile.ReadDockerignore(contextPath)
-
-	// Process COPY steps: compute file hashes and upload files.
-	for i := range result.Steps {
-		step := &result.Steps[i]
-		if step.Type != "COPY" || step.Args == nil || len(*step.Args) < 2 {
-			continue
-		}
-		args := *step.Args
-		src, dest := args[0], args[1]
-
-		// Compute the file hash.
-		hash, err := dockerfile.ComputeFilesHash(src, dest, contextPath, ignorePatterns)
-		if err != nil {
-			return fmt.Errorf("compute file hash for COPY %s %s: %w", src, dest, err)
-		}
-		step.FilesHash = &hash
-
-		// Check whether files need to be uploaded.
-		fileInfo, err := client.GetTemplateFiles(ctx, templateID, hash)
-		if err != nil {
-			return fmt.Errorf("get template files for hash %s: %w", hash, err)
-		}
-
-		if !fileInfo.Present && fileInfo.URL != nil {
-			fmt.Printf("Uploading files for COPY %s %s...\n", src, dest)
-			if err := dockerfile.CollectAndUpload(ctx, *fileInfo.URL, src, contextPath, ignorePatterns); err != nil {
-				return fmt.Errorf("upload files for COPY %s %s: %w", src, dest, err)
-			}
-		} else if fileInfo.Present {
-			fmt.Printf("Files for COPY %s %s already uploaded (cached)\n", src, dest)
-		}
-	}
-
-	// Build parameters.
-	buildParams := sandbox.StartTemplateBuildParams{
-		FromImage: &result.BaseImage,
-		Steps:     &result.Steps,
-	}
-
-	// Apply startup/readiness commands from Dockerfile or CLI overrides.
-	startCmd := result.StartCmd
-	if info.StartCmd != "" {
-		startCmd = info.StartCmd
-	}
-	if startCmd != "" {
-		buildParams.StartCmd = &startCmd
-	}
-
-	readyCmd := result.ReadyCmd
-	if info.ReadyCmd != "" {
-		readyCmd = info.ReadyCmd
-	}
-	if readyCmd != "" {
-		buildParams.ReadyCmd = &readyCmd
-	}
-
-	if info.NoCache {
-		force := true
-		buildParams.Force = &force
-	}
-
-	fmt.Printf("Starting build for template %s (build ID: %s)...\n", templateID, buildID)
-	if err := client.StartTemplateBuild(ctx, templateID, buildID, buildParams); err != nil {
-		return fmt.Errorf("start build: %w", err)
-	}
-
-	return nil
 }
 
 // applyProjectDefaults fills in BuildInfo fields that are still zero from

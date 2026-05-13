@@ -170,41 +170,6 @@ func TestKill_AllListsThenKills(t *testing.T) {
 	}
 }
 
-func TestPause_SingleID(t *testing.T) {
-	srv := withMock(t)
-	_ = captureStdout(t, func() {
-		Pause(PauseInfo{SandboxIDs: []string{"sbx-test"}})
-	})
-	if !sawRequest(srv, "POST", "/api/v1/sbx/sandboxes/sbx-test/pause") {
-		t.Fatalf("expected POST /sandboxes/sbx-test/pause; got %+v", srv.Requests())
-	}
-}
-
-func TestPause_PauseFails(t *testing.T) {
-	srv := withMock(t)
-	srv.Handle("POST", "/api/v1/sbx/sandboxes/{id}/pause", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	})
-	stderr := captureStderr(t, func() {
-		_ = captureStdout(t, func() {
-			Pause(PauseInfo{SandboxIDs: []string{"sbx-test"}})
-		})
-	})
-	if !strings.Contains(stderr, "pause sandbox sbx-test failed") {
-		t.Fatalf("stderr = %q", stderr)
-	}
-}
-
-func TestResume_SingleID(t *testing.T) {
-	srv := withMock(t)
-	_ = captureStdout(t, func() {
-		Resume(ResumeInfo{SandboxIDs: []string{"sbx-test"}})
-	})
-	if !sawRequest(srv, "POST", "/api/v1/sbx/sandboxes/sbx-test/resume") {
-		t.Fatalf("expected POST /sandboxes/sbx-test/resume; got %+v", srv.Requests())
-	}
-}
-
 func TestMetrics_JSONOneShot(t *testing.T) {
 	withMock(t)
 	out := captureStdout(t, func() {

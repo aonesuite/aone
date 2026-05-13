@@ -2,12 +2,10 @@ package sandbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/aonesuite/aone/packages/go/sandbox/dockerfile"
-	"github.com/aonesuite/aone/packages/go/sandbox/internal/apis"
 )
 
 // ReadyCmd is a shell command used to decide when a template is ready.
@@ -52,15 +50,14 @@ func WaitForTimeout(timeoutSeconds int) ReadyCmd {
 
 // TemplateBuilder provides a fluent template build DSL.
 type TemplateBuilder struct {
-	fromImage         *string
-	fromImageRegistry *FromImageRegistry
-	fromTemplate      *string
-	startCmd          *string
-	readyCmd          *string
-	steps             []TemplateStep
-	force             bool
-	contextPath       string
-	ignorePatterns    []string
+	fromImage      *string
+	fromTemplate   *string
+	startCmd       *string
+	readyCmd       *string
+	steps          []TemplateStep
+	force          bool
+	contextPath    string
+	ignorePatterns []string
 }
 
 // NewTemplate creates a new fluent template builder.
@@ -118,7 +115,6 @@ func (t *TemplateBuilder) FromBaseImage() *TemplateBuilder {
 func (t *TemplateBuilder) FromImage(image string) *TemplateBuilder {
 	t.fromImage = &image
 	t.fromTemplate = nil
-	t.fromImageRegistry = nil
 	return t
 }
 
@@ -126,7 +122,6 @@ func (t *TemplateBuilder) FromImage(image string) *TemplateBuilder {
 func (t *TemplateBuilder) FromTemplate(template string) *TemplateBuilder {
 	t.fromTemplate = &template
 	t.fromImage = nil
-	t.fromImageRegistry = nil
 	return t
 }
 
@@ -145,47 +140,6 @@ func (t *TemplateBuilder) FromDockerfile(content string) (*TemplateBuilder, erro
 		t.SetStartCmd(result.StartCmd, WaitForTimeout(20))
 	}
 	return t, nil
-}
-
-// FromRegistry starts the build from a private container registry using
-// username/password authentication.
-func (t *TemplateBuilder) FromRegistry(image, username, password string) *TemplateBuilder {
-	reg := apis.GeneralRegistry{Username: username, Password: password, Type: "registry"}
-	payload, _ := json.Marshal(reg)
-	raw := FromImageRegistry(payload)
-	t.fromImage = &image
-	t.fromImageRegistry = &raw
-	t.fromTemplate = nil
-	return t
-}
-
-// FromAWSRegistry starts the build from an AWS ECR image using the supplied
-// credentials.
-func (t *TemplateBuilder) FromAWSRegistry(image, accessKeyID, secretAccessKey, region string) *TemplateBuilder {
-	reg := apis.AWSRegistry{
-		AwsAccessKeyID:     accessKeyID,
-		AwsSecretAccessKey: secretAccessKey,
-		AwsRegion:          region,
-		Type:               "aws",
-	}
-	payload, _ := json.Marshal(reg)
-	raw := FromImageRegistry(payload)
-	t.fromImage = &image
-	t.fromImageRegistry = &raw
-	t.fromTemplate = nil
-	return t
-}
-
-// FromGCPRegistry starts the build from a Google Cloud Artifact / Container
-// Registry image using a service-account JSON.
-func (t *TemplateBuilder) FromGCPRegistry(image, serviceAccountJSON string) *TemplateBuilder {
-	reg := apis.GCPRegistry{ServiceAccountJSON: serviceAccountJSON, Type: "gcp"}
-	payload, _ := json.Marshal(reg)
-	raw := FromImageRegistry(payload)
-	t.fromImage = &image
-	t.fromImageRegistry = &raw
-	t.fromTemplate = nil
-	return t
 }
 
 // AddStep appends a raw template build step.
@@ -436,7 +390,6 @@ func (t *TemplateBuilder) BuildInBackground(ctx context.Context, c *Client, name
 	create := CreateTemplateParams{
 		Alias:      &name,
 		Name:       &name,
-		Tags:       &opts.Tags,
 		CPUCount:   opts.CPUCount,
 		MemoryMB:   opts.MemoryMB,
 		Dockerfile: &dockerfile,
@@ -451,13 +404,11 @@ func (t *TemplateBuilder) BuildInBackground(ctx context.Context, c *Client, name
 		Name:       name,
 		TemplateID: created.TemplateID,
 		BuildID:    created.BuildID,
-		Tags:       created.Tags,
 	}, nil
 }
 
 // BuildTemplateOptions customizes TemplateBuilder build requests.
 type BuildTemplateOptions struct {
-	Tags      []string
 	CPUCount  *int32
 	MemoryMB  *int32
 	SkipCache bool
@@ -468,7 +419,6 @@ type BuildInfo struct {
 	Name       string
 	TemplateID string
 	BuildID    string
-	Tags       []string
 }
 
 func quoteAll(values []string) []string {

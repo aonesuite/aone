@@ -65,17 +65,13 @@ generate-aone:
 	cd packages/go && go build ./internal/aoneapi
 
 generate-sandbox:
-	# Volume content API
-	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/volumeapi/oapi-codegen.yaml \
-		spec/sandbox/openapi-volumecontent.yml
-
 	# envd HTTP API
 	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/envdapi/oapi-codegen.yaml \
 		spec/sandbox/envd/envd.yaml
 
 	# envd ConnectRPC (requires buf, protoc-gen-go, protoc-gen-connect-go)
-	cd spec/sandbox/envd && buf generate
+	buf generate --template packages/go/sandbox/internal/envdapi/buf.gen.yaml spec/sandbox/envd
 
 	# Format and verify generated sandbox-specific packages
-	gofmt -w packages/go/sandbox/internal/volumeapi packages/go/sandbox/internal/envdapi
+	gofmt -w packages/go/sandbox/internal/envdapi
 	cd packages/go && go build ./...

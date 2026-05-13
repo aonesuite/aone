@@ -8,7 +8,7 @@ SDK surface.
 Current packages:
 
 - `go`: Go SDK module. Its current public packages are:
-  - `sandbox`, covering sandbox, template, volume, filesystem, command, PTY, and git operations.
+  - `sandbox`, covering sandbox, template, filesystem, command, PTY, and git operations.
   - `tts`, covering text-to-speech voice listing and synthesis.
 
 Go users import the sandbox package directly:

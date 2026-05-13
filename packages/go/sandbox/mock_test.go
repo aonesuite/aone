@@ -73,29 +73,137 @@ func newTestSandbox(t *testing.T, srv *httptest.Server) *Sandbox {
 	return sb
 }
 
-// ---------------------------------------------------------------------------
-// TemplateAliasExists
-// ---------------------------------------------------------------------------
+func TestListTemplatesParamsAreMapped(t *testing.T) {
+	var gotQuery string
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/sbx/templates" {
+			http.NotFound(w, r)
+			return
+		}
+		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `[]`)
+	}))
 
-func TestTemplateAliasExists(t *testing.T) {
-	c, _ := newTestClient(t, http.NotFoundHandler())
-	exists, err := c.TemplateAliasExists(context.Background(), "my-alias")
-	if err != nil {
-		t.Fatalf("TemplateAliasExists: %v", err)
+	apiKeyID := "key-1"
+	name := "demo"
+	buildStatus := "ready"
+	public := "true"
+	cursor := "cur-1"
+	limit := int32(25)
+	if _, err := c.ListTemplates(context.Background(), &ListTemplatesParams{
+		APIKeyID:    &apiKeyID,
+		Name:        &name,
+		BuildStatus: &buildStatus,
+		Public:      &public,
+		Cursor:      &cursor,
+		Limit:       &limit,
+	}); err != nil {
+		t.Fatalf("ListTemplates: %v", err)
 	}
-	if exists {
-		t.Fatal("expected missing alias")
+
+	values, err := url.ParseQuery(gotQuery)
+	if err != nil {
+		t.Fatalf("parse query %q: %v", gotQuery, err)
+	}
+	for key, want := range map[string]string{
+		"api_key_id":   apiKeyID,
+		"name":         name,
+		"build_status": buildStatus,
+		"public":       public,
+		"cursor":       cursor,
+		"limit":        "25",
+	} {
+		if got := values.Get(key); got != want {
+			t.Fatalf("query %s = %q, want %q; raw query %q", key, got, want, gotQuery)
+		}
 	}
 }
 
-// ---------------------------------------------------------------------------
-// GetTemplateTags
-// ---------------------------------------------------------------------------
+func TestTemplateResponseFieldsAreMapped(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/sbx/templates/tpl-1":
+			_, _ = io.WriteString(w, `{
+				"template_id":"tpl-1",
+				"build_id":"build-1",
+				"build_status":"ready",
+				"cpu_count":2,
+				"memory_mb":1024,
+				"disk_size_mb":8192,
+				"envd_version":"0.0.1",
+				"public":true,
+				"source":"user",
+				"editable":true,
+				"deletable":false,
+				"aliases":["alias-1"],
+				"names":["name-1"],
+				"created_at":"2025-01-01T00:00:00Z",
+				"updated_at":"2025-01-02T00:00:00Z"
+			}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/sbx/templates":
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = io.WriteString(w, `{
+				"template_id":"tpl-2",
+				"build_id":"build-2",
+				"public":true,
+				"aliases":["alias-2"],
+				"names":["name-2"]
+			}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
 
-func TestGetTemplateTags(t *testing.T) {
-	c, _ := newTestClient(t, http.NotFoundHandler())
-	if _, err := c.GetTemplateTags(context.Background(), "tpl_42"); err == nil {
-		t.Fatal("expected unsupported error, got nil")
+	tmpl, err := c.GetTemplate(context.Background(), "tpl-1")
+	if err != nil {
+		t.Fatalf("GetTemplate: %v", err)
+	}
+	if tmpl.Names[0] != "name-1" || tmpl.Source != "user" || !tmpl.Editable || tmpl.Deletable {
+		t.Fatalf("template fields not mapped: %+v", tmpl)
+	}
+
+	created, err := c.CreateTemplate(context.Background(), CreateTemplateParams{})
+	if err != nil {
+		t.Fatalf("CreateTemplate: %v", err)
+	}
+	if created.Aliases[0] != "alias-2" || created.Names[0] != "name-2" {
+		t.Fatalf("create response fields not mapped: %+v", created)
+	}
+}
+
+func TestTemplateBuildStatusFieldsAreMapped(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/sbx/templates/tpl-1/builds/build-1/status" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{
+			"template_id":"tpl-1",
+			"build_id":"build-1",
+			"status":"ready",
+			"envd_version":"0.0.2",
+			"logs":["legacy line"],
+			"log_entries":[{
+				"level":"info",
+				"message":"structured line",
+				"source":"builder",
+				"timestamp":"2025-01-01T00:00:00Z"
+			}]
+		}`)
+	}))
+
+	status, err := c.GetTemplateBuildStatus(context.Background(), "tpl-1", "build-1")
+	if err != nil {
+		t.Fatalf("GetTemplateBuildStatus: %v", err)
+	}
+	if status.EnvdVersion != "0.0.2" || len(status.Logs) != 1 || status.Logs[0] != "legacy line" {
+		t.Fatalf("status fields not mapped: %+v", status)
+	}
+	if len(status.LogEntries) != 1 || status.LogEntries[0].Message != "structured line" || status.LogEntries[0].Step == nil || *status.LogEntries[0].Step != "builder" {
+		t.Fatalf("log entries not mapped: %+v", status.LogEntries)
 	}
 }
 

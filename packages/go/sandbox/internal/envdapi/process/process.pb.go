@@ -323,12 +323,11 @@ func (x *ListResponse) GetProcesses() []*ProcessInfo {
 }
 
 type StartRequest struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Process *ProcessConfig         `protobuf:"bytes,1,opt,name=process,proto3" json:"process,omitempty"`
-	Pty     *PTY                   `protobuf:"bytes,2,opt,name=pty,proto3,oneof" json:"pty,omitempty"`
-	Tag     *string                `protobuf:"bytes,3,opt,name=tag,proto3,oneof" json:"tag,omitempty"`
-	// stdin defaults to true when omitted.
-	Stdin         *bool `protobuf:"varint,4,opt,name=stdin,proto3,oneof" json:"stdin,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Process       *ProcessConfig         `protobuf:"bytes,1,opt,name=process,proto3" json:"process,omitempty"`
+	Pty           *PTY                   `protobuf:"bytes,2,opt,name=pty,proto3,oneof" json:"pty,omitempty"`
+	Tag           *string                `protobuf:"bytes,3,opt,name=tag,proto3,oneof" json:"tag,omitempty"`
+	Stdin         *bool                  `protobuf:"varint,4,opt,name=stdin,proto3,oneof" json:"stdin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

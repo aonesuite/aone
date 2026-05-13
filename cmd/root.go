@@ -28,7 +28,7 @@ var verbosityFlag int
 var rootCmd = &cobra.Command{
 	Use:     "aone",
 	Short:   "AoneSuite command line tools",
-	Long:    "AoneSuite CLI — manage sandboxes, templates, volumes, and account credentials.",
+	Long:    "AoneSuite CLI — manage sandboxes, templates, and account credentials.",
 	Version: resolveVersion(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Setting AONE_DEBUG here means anything that constructs an SDK
