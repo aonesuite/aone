@@ -1,4 +1,4 @@
-module github.com/aonesuite/aone/packages/go/sandbox
+module github.com/aonesuite/aone/packages/go
 
 go 1.22
 

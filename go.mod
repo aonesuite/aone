@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/aonesuite/aone/packages/go/sandbox v0.0.0
+	github.com/aonesuite/aone/packages/go v0.0.0
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
@@ -54,4 +54,4 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 )
 
-replace github.com/aonesuite/aone/packages/go/sandbox => ./packages/go/sandbox
+replace github.com/aonesuite/aone/packages/go => ./packages/go

@@ -4,8 +4,16 @@
 
 Current packages:
 
-- `go/sandbox`: Go SDK for sandbox, template, volume, filesystem, command, PTY, and git operations.
+- `go`: Go SDK module. Its current public package is `sandbox`, covering sandbox, template, volume, filesystem, command, PTY, and git operations.
 
-Planned packages should keep their own manifest, tests, generation scripts, and README in their package directory. Shared OpenAPI and proto inputs live in `../spec/`; root-level Makefile targets should only orchestrate package-local build, test, and code generation commands.
+Go users import the sandbox package directly:
 
-For the nested Go SDK module, release tags must use the module path prefix, for example `packages/go/sandbox/v0.1.0`. The root CLI may use a local `replace` during development, but CLI releases should depend on a real Go SDK version and pass `make releasecheck`.
+```go
+import "github.com/aonesuite/aone/packages/go/sandbox"
+```
+
+The Go SDK keeps the complete generated OpenAPI client under `go/internal/aoneapi` as a shared implementation detail. Public SDK packages should expose focused, module-level APIs such as `go/sandbox`, future `go/tts`, or future `go/projects` instead of making the generated client the public surface.
+
+Planned language SDKs should keep their own manifest, tests, generation scripts, and README in their package directory. Shared OpenAPI and proto inputs live in `../spec/`; root-level Makefile targets should only orchestrate package-local build, test, and code generation commands.
+
+For the nested Go SDK module, release tags must use the module path prefix, for example `packages/go/v0.1.0`. The root CLI may use a local `replace` during development, but CLI releases should depend on a real Go SDK version and pass `make releasecheck`.

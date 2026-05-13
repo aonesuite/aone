@@ -4,20 +4,28 @@ This repository is a Go CLI plus multi-language SDK monorepo. The root module bu
 
 ## Go SDK
 
-The Go sandbox SDK lives at `packages/go/sandbox` and has its own module path:
+The Go SDK lives at `packages/go` and has its own module path:
 
 ```text
-github.com/aonesuite/aone/packages/go/sandbox
+github.com/aonesuite/aone/packages/go
+```
+
+Sandbox users still import the public sandbox package:
+
+```go
+import "github.com/aonesuite/aone/packages/go/sandbox"
 ```
 
 Because it is a nested Go module, its Git tags must include the module directory prefix:
 
 ```text
-packages/go/sandbox/v0.1.0
-packages/go/sandbox/v0.1.1
+packages/go/v0.1.0
+packages/go/v0.1.1
 ```
 
 Before a root CLI release, publish or select a real Go SDK version and update the root `go.mod` to require that version instead of `v0.0.0`.
+
+Changing the Go SDK module from `github.com/aonesuite/aone/packages/go/sandbox` to `github.com/aonesuite/aone/packages/go` is a module-level breaking change for anyone who required the old nested module directly. If the old module was ever consumed through a pseudo-version, the release notes must call out the migration explicitly: require `github.com/aonesuite/aone/packages/go vX.Y.Z`, while keeping code imports on `github.com/aonesuite/aone/packages/go/sandbox`.
 
 ## Root CLI
 
@@ -25,8 +33,8 @@ The root CLI can use `go.work` and a local `replace` while developing inside the
 
 Do not release the root CLI while either of these is true:
 
-- `go.mod` requires `github.com/aonesuite/aone/packages/go/sandbox v0.0.0`
-- `go.mod` contains `replace github.com/aonesuite/aone/packages/go/sandbox => ./packages/go/sandbox`
+- `go.mod` requires `github.com/aonesuite/aone/packages/go v0.0.0`
+- `go.mod` contains `replace github.com/aonesuite/aone/packages/go => ./packages/go`
 
 Run this before creating a CLI tag:
 
@@ -46,7 +54,7 @@ Local development should use the checked-in `go.work` file:
 
 ```sh
 go test ./...
-cd packages/go/sandbox && go test ./...
+cd packages/go && go test ./...
 ```
 
 When the Go SDK has a real published version, the preferred steady state is:

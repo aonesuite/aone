@@ -28,26 +28,26 @@ fmt:
 
 test:
 	go test -failfast -count=1 -v -timeout 30m ./...
-	cd packages/go/sandbox && go test -failfast -count=1 -v -timeout 30m ./...
+	cd packages/go && go test -failfast -count=1 -v -timeout 30m ./...
 
 unittest:
 	go test -failfast -count=1 -v ./...
-	cd packages/go/sandbox && go test -failfast -count=1 -v ./...
+	cd packages/go && go test -failfast -count=1 -v ./...
 
 integrationtest:
 	go test -failfast -count=1 -parallel 1 -v ./...
-	cd packages/go/sandbox && go test -failfast -count=1 -parallel 1 -v ./...
+	cd packages/go && go test -failfast -count=1 -parallel 1 -v ./...
 
 staticcheck:
 	staticcheck ./...
-	cd packages/go/sandbox && staticcheck ./...
+	cd packages/go && staticcheck ./...
 
 releasecheck:
-	@if grep -q 'github.com/aonesuite/aone/packages/go/sandbox v0\.0\.0' go.mod; then \
-		echo "releasecheck: root go.mod still depends on Go SDK v0.0.0; tag packages/go/sandbox/vX.Y.Z and require it before releasing the CLI"; \
+	@if grep -q 'github.com/aonesuite/aone/packages/go v0\.0\.0' go.mod; then \
+		echo "releasecheck: root go.mod still depends on Go SDK v0.0.0; tag packages/go/vX.Y.Z and require it before releasing the CLI"; \
 		exit 1; \
 	fi
-	@if grep -q '^replace github.com/aonesuite/aone/packages/go/sandbox => ./packages/go/sandbox' go.mod; then \
+	@if grep -q '^replace github.com/aonesuite/aone/packages/go => ./packages/go' go.mod; then \
 		echo "releasecheck: root go.mod still has a local Go SDK replace; remove it before releasing the CLI"; \
 		exit 1; \
 	fi
@@ -57,12 +57,12 @@ generate: generate-aone generate-sandbox
 
 generate-aone:
 	# Full Aone service API
-	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/aoneapi/oapi-codegen.yaml \
+	$(OAPI_CODEGEN) --config packages/go/internal/aoneapi/oapi-codegen.yaml \
 		spec/openapi.yml
 
 	# Format and verify generated Aone API package
-	gofmt -w packages/go/sandbox/internal/aoneapi
-	cd packages/go/sandbox && go build ./internal/aoneapi
+	gofmt -w packages/go/internal/aoneapi
+	cd packages/go && go build ./internal/aoneapi
 
 generate-sandbox:
 	# Volume content API
@@ -78,4 +78,4 @@ generate-sandbox:
 
 	# Format and verify generated sandbox-specific packages
 	gofmt -w packages/go/sandbox/internal/volumeapi packages/go/sandbox/internal/envdapi
-	cd packages/go/sandbox && go build ./...
+	cd packages/go && go build ./...

@@ -142,7 +142,7 @@ This repository is organized as a CLI plus multi-language SDK monorepo:
 |---|---|
 | `cmd/` | Go CLI entrypoint and command wiring |
 | `internal/` | CLI-only implementation details |
-| `packages/go/sandbox/` | Go sandbox SDK module |
+| `packages/go/` | Go SDK module; `sandbox/` is the sandbox package and `internal/` holds shared generated clients |
 | `packages/` | Home for language SDK packages such as future JS and Python SDKs |
 | `spec/` | Shared OpenAPI and proto specifications used by SDK code generation |
 
