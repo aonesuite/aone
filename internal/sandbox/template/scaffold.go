@@ -33,6 +33,7 @@ var languageFiles = map[string][]struct {
 		{tmpl: "templates/go/Makefile.tmpl", output: "Makefile"},
 		{tmpl: "templates/go/Dockerfile.tmpl", output: "Dockerfile"},
 		{tmpl: "templates/go/aone.sandbox.toml.tmpl", output: "aone.sandbox.toml"},
+		{tmpl: "templates/go/README.md.tmpl", output: "README.md"},
 	},
 	"typescript": {
 		{tmpl: "templates/typescript/template.ts.tmpl", output: "template.ts"},

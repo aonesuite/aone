@@ -9,7 +9,7 @@ import (
 
 func TestScaffold_GeneratesAllExpectedFilesPerLanguage(t *testing.T) {
 	cases := map[string][]string{
-		"go":         {"main.go", "go.mod", "Makefile", "Dockerfile", "aone.sandbox.toml"},
+		"go":         {"main.go", "go.mod", "Makefile", "Dockerfile", "aone.sandbox.toml", "README.md"},
 		"typescript": {"template.ts", "package.json", "Dockerfile", "aone.sandbox.toml", "build.dev.ts", "build.prod.ts", "README.md"},
 		"python":     {"template.py", "requirements.txt", "Dockerfile", "aone.sandbox.toml", "build_dev.py", "build_prod.py", "README.md", "Makefile"},
 	}
@@ -40,6 +40,23 @@ func TestScaffold_GeneratesAllExpectedFilesPerLanguage(t *testing.T) {
 				t.Fatalf("aone.sandbox.toml does not embed template name; got:\n%s", toml)
 			}
 		})
+	}
+}
+
+func TestScaffold_GoReadmeLooksLikeTemplateProject(t *testing.T) {
+	dir := t.TempDir()
+	if err := scaffold("demo-template", "go", dir); err != nil {
+		t.Fatalf("scaffold(go): %v", err)
+	}
+
+	readme, err := os.ReadFile(filepath.Join(dir, "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	for _, want := range []string{"Prerequisites", "Building The Template", "aone sandbox template create demo-template", "aone sandbox create"} {
+		if !strings.Contains(string(readme), want) {
+			t.Fatalf("README.md should contain %q; got:\n%s", want, readme)
+		}
 	}
 }
 

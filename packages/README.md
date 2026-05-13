@@ -1,9 +1,9 @@
 # Aone SDK packages
 
 `packages/` contains independently published SDK packages for AoneSuite. Each
-language package owns its own module manifest, tests, generation config, and
-README so SDKs can evolve without turning the root CLI module into the public
-SDK surface.
+language package should own its own module manifest, tests, generation config,
+and README so SDKs can evolve without turning the root CLI module into the
+public SDK surface.
 
 Current packages:
 
@@ -29,6 +29,8 @@ should expose focused, module-level APIs such as `go/sandbox`, `go/tts`, or
 future `go/projects` instead of making the generated client the public surface.
 
 ## Go SDK quick start
+
+See `go/README.md` for the package-level overview.
 
 Install the Go SDK module:
 
@@ -95,3 +97,6 @@ For the nested Go SDK module, release tags must use the module path prefix, for
 example `packages/go/v0.1.0`. The root CLI may use a local `replace` during
 development, but CLI releases should depend on a real Go SDK version and pass
 `make releasecheck`.
+
+See `../docs/development.md` for local workspace, testing, and code generation
+details.

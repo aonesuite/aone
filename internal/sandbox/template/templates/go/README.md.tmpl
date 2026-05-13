@@ -1,0 +1,39 @@
+# {{.Name}} - Aone Sandbox Template
+
+This is an Aone sandbox template project for Go.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- An Aone sandbox API key
+- Go installed
+- The `aone` CLI installed
+
+## Building Locally
+
+```bash
+make build
+```
+
+## Building The Template
+
+```bash
+aone sandbox template create {{.Name}}
+```
+
+The command reads `aone.sandbox.toml`, builds the Dockerfile, and writes the
+resolved `template_id` back to the config file.
+
+## Using The Template
+
+```bash
+aone sandbox create
+```
+
+## Template Structure
+
+- `main.go` - Example Go entrypoint
+- `Dockerfile` - Sandbox image definition
+- `aone.sandbox.toml` - Template project config
+- `Makefile` - Local build and run helpers

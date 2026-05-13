@@ -7,6 +7,8 @@ for sandbox automation and text-to-speech.
 
 ## Install
 
+The CLI currently builds with Go 1.26.2 or newer.
+
 ```sh
 go install github.com/aonesuite/aone@latest
 ```
@@ -25,6 +27,8 @@ Local development uses Go workspaces:
 go test ./...
 cd packages/go && go test ./...
 ```
+
+See `docs/development.md` for the full development workflow.
 
 ## Quick start
 
@@ -51,9 +55,14 @@ aone sandbox create
 Credentials are resolved with the following precedence:
 
 ```
-flag --api-key   >  env AONE_API_KEY   >  ~/.config/aone/config.json
-flag --endpoint  >  env AONE_API_URL  >  config file  >  built-in default
+env AONE_API_KEY   >  ~/.config/aone/config.json
+env AONE_API_URL   >  config file  >  built-in default
 ```
+
+`auth login --api-key/--endpoint` and `auth configure --api-key/--endpoint`
+write values to the config file. Regular sandbox and TTS commands do not expose
+temporary `--api-key` or `--endpoint` flags; use environment variables for
+per-command overrides.
 
 | Subcommand | Purpose |
 |---|---|
@@ -64,6 +73,9 @@ flag --endpoint  >  env AONE_API_URL  >  config file  >  built-in default
 
 `AONE_CONFIG_HOME` overrides the config directory, useful for tests so they
 don't pollute the real `~/.config/aone`.
+
+See `docs/authentication-and-debugging.md` for credential management and debug
+logging details.
 
 ## Project configuration: `aone.sandbox.toml`
 
@@ -86,6 +98,8 @@ public        = false
 Commands that consume the file: `template build`, `template create`,
 `template delete`, `template publish` / `unpublish`, `sandbox create`.
 
+See `docs/sandbox-templates.md` for the full template project workflow.
+
 ## Command reference
 
 Top-level groups (run `aone <cmd> --help` for full flag listings):
@@ -99,12 +113,14 @@ aone sandbox template   init | create | list | get | delete | publish |
 aone tts         voices | speech
 ```
 
+See `docs/cli-reference.md` for a compact command and flag reference.
+
 Common flags:
 
 - `-v` / `-vv` — debug / trace logs to stderr (network calls, config resolution, redacted headers + bodies). Stdout stays clean so pipelines like `aone sandbox list -f json | jq` keep working.
 - `--debug` — alias of `-v`; also sets `AONE_DEBUG=1` so SDK-level debug paths fire.
 - `--version` — print the CLI version.
-- `--format pretty|json` — supported on `list`, `info`, `logs`, `metrics`.
+- `--format pretty|json` — supported by sandbox list / info / logs / metrics and template list / logs commands.
 
 Common aliases:
 
@@ -115,9 +131,21 @@ Common aliases:
 - Frequently used subcommands also have short aliases, for example `list` /
   `ls`, `create` / `cr`, `connect` / `cn`, `exec` / `ex`, and `logs` / `lg`.
 
+See `docs/tts.md` for text-to-speech CLI and SDK examples.
+
 `aone sandbox template create <template-name>` is the primary template build
 surface. The lower-level `template build` command still exists internally but
 is hidden from normal help output.
+
+`aone sandbox create` can run detached with `--detach`, pass environment
+variables with `--env-var KEY=VALUE`, attach metadata with `--metadata`, and
+set network policy options such as `--allow-out`, `--deny-out`, and
+`--allow-internet-access`.
+
+`aone sandbox template create <template-name>` builds from `aone.Dockerfile` or
+`Dockerfile` by default. Use `--dockerfile`, `--path`, `--cmd`, `--ready-cmd`,
+`--cpu-count`, `--memory-mb`, and `--disk-size-mb` to override the build context
+and runtime defaults.
 
 `aone sandbox template migrate` converts an existing Dockerfile into
 SDK-native template code for Go, TypeScript, or Python.
@@ -242,4 +270,9 @@ This repository is organized as a CLI plus multi-language SDK monorepo:
 | `packages/` | Home for language SDK packages such as future JS and Python SDKs |
 | `spec/` | Shared OpenAPI and proto specifications used by SDK code generation |
 
-See `docs/release.md` for the Go SDK and CLI versioning rules.
+See `docs/cli-reference.md` for command reference,
+`docs/authentication-and-debugging.md` for auth and debug logging,
+`docs/sandbox-templates.md` for template workflows, `docs/tts.md` for
+text-to-speech usage, `docs/development.md` for contributor setup,
+`CHANGELOG.md` for current user-visible changes, and `docs/release.md` for the
+Go SDK and CLI versioning rules.

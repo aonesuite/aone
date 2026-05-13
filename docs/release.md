@@ -43,6 +43,30 @@ Before a root CLI release, publish or select a real Go SDK version and update th
 
 Changing the Go SDK module from `github.com/aonesuite/aone/packages/go/sandbox` to `github.com/aonesuite/aone/packages/go` is a module-level breaking change for anyone who required the old nested module directly. If the old module was ever consumed through a pseudo-version, the release notes must call out the migration explicitly: require `github.com/aonesuite/aone/packages/go vX.Y.Z`, while keeping code imports on `github.com/aonesuite/aone/packages/go/sandbox`.
 
+### SDK Release Checklist
+
+1. Run the SDK test suite:
+
+```sh
+cd packages/go
+go test ./...
+```
+
+1. Update `CHANGELOG.md` so the SDK section names the version being released.
+
+1. Tag the SDK from the repository root with the nested module prefix:
+
+```sh
+git tag packages/go/vX.Y.Z
+git push origin packages/go/vX.Y.Z
+```
+
+1. Verify consumers can resolve the module:
+
+```sh
+GONOSUMDB=github.com/aonesuite/aone go list -m github.com/aonesuite/aone/packages/go@vX.Y.Z
+```
+
 ## Root CLI
 
 The root CLI can use `go.work` and a local `replace` while developing inside the monorepo. That is a development convenience only.
@@ -63,6 +87,41 @@ The release check intentionally runs with `GOWORK=off` so it verifies the module
 ```sh
 go install github.com/aonesuite/aone@latest
 ```
+
+Before tagging, update `CHANGELOG.md` with the SDK tag and CLI tag being
+released. Keep migration notes for any module-path or command-surface changes
+that affect existing users.
+
+### CLI Release Checklist
+
+1. Publish or select a real Go SDK tag such as `packages/go/vX.Y.Z`.
+
+1. Update root `go.mod` to require the released SDK version:
+
+```sh
+go get github.com/aonesuite/aone/packages/go@vX.Y.Z
+```
+
+1. Remove the local SDK `replace` from root `go.mod`.
+
+1. Run the release check:
+
+```sh
+make releasecheck
+```
+
+1. Update `CHANGELOG.md` so the CLI section names the version being released.
+
+1. Tag and push the CLI release from the repository root:
+
+```sh
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+1. After tagging, return the development branch to its normal monorepo state if
+   needed: root `go.mod` may go back to the local SDK `replace`, and `go.work`
+   should keep linking `.` and `./packages/go`.
 
 ## Development
 
