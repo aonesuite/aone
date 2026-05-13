@@ -133,3 +133,17 @@ API keys, `Authorization`, cookies, and JSON fields like `apiKey` / `password` /
 | `AONE_LOG_FORMAT` | `json` switches log records to JSON; default is text |
 | `AONE_LOG_FILE` | Write log records to this file (mode 0600) instead of stderr |
 | `AONE_CONFIG_HOME` | Override `~/.config/aone` (test isolation) |
+
+## Repository layout
+
+This repository is organized as a CLI plus multi-language SDK monorepo:
+
+| Path | Purpose |
+|---|---|
+| `cmd/` | Go CLI entrypoint and command wiring |
+| `internal/` | CLI-only implementation details |
+| `packages/go/sandbox/` | Go sandbox SDK module |
+| `packages/` | Home for language SDK packages such as future JS and Python SDKs |
+| `spec/` | Shared OpenAPI and proto specifications used by SDK code generation |
+
+See `docs/release.md` for the Go SDK and CLI versioning rules.

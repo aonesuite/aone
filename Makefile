@@ -1,4 +1,4 @@
-.PHONY: build install clean fmt test unittest integrationtest staticcheck generate generate-aone generate-sandbox
+.PHONY: build install clean fmt test unittest integrationtest staticcheck generate generate-aone generate-sandbox releasecheck
 
 # --- CLI ---------------------------------------------------------------------
 
@@ -42,12 +42,23 @@ staticcheck:
 	staticcheck ./...
 	cd packages/go/sandbox && staticcheck ./...
 
+releasecheck:
+	@if grep -q 'github.com/aonesuite/aone/packages/go/sandbox v0\.0\.0' go.mod; then \
+		echo "releasecheck: root go.mod still depends on Go SDK v0.0.0; tag packages/go/sandbox/vX.Y.Z and require it before releasing the CLI"; \
+		exit 1; \
+	fi
+	@if grep -q '^replace github.com/aonesuite/aone/packages/go/sandbox => ./packages/go/sandbox' go.mod; then \
+		echo "releasecheck: root go.mod still has a local Go SDK replace; remove it before releasing the CLI"; \
+		exit 1; \
+	fi
+	GOWORK=off go test -failfast -count=1 ./...
+
 generate: generate-aone generate-sandbox
 
 generate-aone:
 	# Full Aone service API
 	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/aoneapi/oapi-codegen.yaml \
-		api/openapi.yml
+		spec/openapi.yml
 
 	# Format and verify generated Aone API package
 	gofmt -w packages/go/sandbox/internal/aoneapi
@@ -56,14 +67,14 @@ generate-aone:
 generate-sandbox:
 	# Volume content API
 	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/volumeapi/oapi-codegen.yaml \
-		api/sandbox/openapi-volumecontent.yml
+		spec/sandbox/openapi-volumecontent.yml
 
 	# envd HTTP API
 	$(OAPI_CODEGEN) --config packages/go/sandbox/internal/envdapi/oapi-codegen.yaml \
-		api/sandbox/envd/envd.yaml
+		spec/sandbox/envd/envd.yaml
 
 	# envd ConnectRPC (requires buf, protoc-gen-go, protoc-gen-connect-go)
-	cd api/sandbox/envd && buf generate
+	cd spec/sandbox/envd && buf generate
 
 	# Format and verify generated sandbox-specific packages
 	gofmt -w packages/go/sandbox/internal/volumeapi packages/go/sandbox/internal/envdapi
